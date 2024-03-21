@@ -1,6 +1,6 @@
 package templates
 
-const K8sLocal = `# each backend pod
+const AppLocal = `# each backend pod
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -44,7 +44,7 @@ spec:
     app: {{.AppName}}-local
   ports:
     - name: http
-      port: 24243 # load balancer port (external)
-      targetPort: 55555 # API port (internal)
+      port: {{.API.Port}} # load balancer port (external) - set by Aldev
+      targetPort: 55555 # API port (internal) - should not be changed
   type: LoadBalancer
 `
