@@ -41,14 +41,15 @@ func Execute() {
 var (
 	cfgFileName  string
 	verbose      bool
-	webLocalDeps []string
+	useLocalDeps bool
+	options      string
 )
 
 func init() {
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
-	aldevCmd.LocalFlags().StringSliceVarP(&webLocalDeps, "use-local", "l", []string{},
-		"the web dependencies to use locally rather than their released versions")
+	aldevCmd.PersistentFlags().BoolVarP(&useLocalDeps, "use-local-deps", "u", false,
+		"to use the local dependencies declared in the config file")
 }
 
 // ----------------------------------------------------------------------------
@@ -136,18 +137,27 @@ func aldevRun(cmd *cobra.Command, args []string) {
 
 // building & deploying the app
 func asyncBuildAndDeploy(ctx context.Context) {
-	// making sure we clean up at the end
-	defer func() {
-		time.Sleep(100 * time.Millisecond)
-		utils.Info("We'll clean up the context now")
-		utils.Run("tilt down")
-	}()
-
 	// making sure we recover any big crashing error
 	defer utils.Recover("building & deploying the app")
 
 	// reading the Aldev config again, in case it has changed
 	cfg := utils.ReadConfig(cfgFileName)
+
+	// computing the custom options
+	if useLocalDeps && len(cfg.Web.LocalDeps) > 0 {
+		options = " --use-local "
+		options = options + strings.Join(cfg.Web.LocalDeps, options)
+	}
+	if options != "" {
+		options = " --" + options
+	}
+
+	// making sure we clean up at the end
+	defer func() {
+		time.Sleep(100 * time.Millisecond)
+		utils.Info("We'll clean up the context now")
+		utils.Run("tilt down%s", options)
+	}()
 
 	// making sure the config map is here and up-to-date
 	utils.EnsureConfigmap(cfg)
@@ -156,26 +166,25 @@ func asyncBuildAndDeploy(ctx context.Context) {
 	utils.EnsureNamespace(cfg)
 
 	// making sure some needed files are here
-	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-app.yaml", templates.AppLocal)
+	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-app-loc-deps.yaml", templates.AppLocal)
+	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-app.yaml", templates.AppLocal+templates.AppLocalFrontContainer)
 	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-docker-local-api", templates.DockerLocalAPI)
+	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-docker-local-web", templates.DockerLocalWEB)
 	utils.EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
 
 	// making sure the namespace is fresh
 	if string(utils.RunAndGet(utils.Fatal, "kubectl get all --namespace %s-local", cfg.AppName)) != "" {
 		utils.Info("The namespace needs some cleanup first")
-		utils.Run("tilt down")
+		utils.Run("tilt down%s", options)
 	}
 
 	// Running a command that never finish with the cancelable context
-	options := ""
-	if len(cfg.Web.UseLocal) > 0 {
-		options = " --use-local "
-		options = options + strings.Join(cfg.Web.UseLocal, options)
+
+	mode := ""
+	if verbose {
+		mode = " --verbose --debug"
 	}
-	if options != "" {
-		options = " --" + options
-	}
-	utils.RunWithCtx(ctx, "tilt up --stream%s", options)
+	utils.RunWithCtx(ctx, "tilt up%s --stream%s", mode, options)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()

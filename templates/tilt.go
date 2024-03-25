@@ -10,15 +10,18 @@ config.define_string_list('use-local', usage='use this to include our own librar
 cfg = config.parse()
 localDeps = cfg.get('use-local')
 
-# describing the deployment of all the services, and their configuration
-k8s_yaml(['{{.Deploying.Dir}}/{{.AppName}}-app.yaml', '{{.Deploying.Dir}}/{{.AppName}}-cm.yaml'])
+# describing the deployment of all the backend services, and their configuration
+if localDeps:
+  k8s_yaml(['{{.Deploying.Dir}}/{{.AppName}}-app-loc-deps.yaml', '{{.Deploying.Dir}}/{{.AppName}}-cm.yaml'])
+else:
+  k8s_yaml(['{{.Deploying.Dir}}/{{.AppName}}-app.yaml', '{{.Deploying.Dir}}/{{.AppName}}-cm.yaml'])
 
 # --- API part ----------------------------------------------------------------
 
 # building the API's code
 local_resource(
-    name  ='{{.AppName}}-back-compile',
-    cmd   ='cd {{.API.Dir}} && go mod tidy && go build -o ../tmp/{{.AppName}}-local ./main && cd ..',
+    name  ='{{.AppName}}-api-compile',
+    cmd   ='cd {{.API.Dir}} && go mod tidy && go build -o ../tmp/{{.AppName}}-api-local ./main && cd ..',
     deps  =['{{.API.Dir}}', '../goald'], # taking into account the dependencies
     ignore=['{{.API.Dir}}/go.sum', '{{.API.Config}}'],
     )
@@ -26,9 +29,9 @@ local_resource(
 # describing the containers for the backend - cf https://docs.tilt.dev/extensions.html
 load('ext://restart_process', 'docker_build_with_restart')
 docker_build_with_restart(
-  ref        ='{{.AppName}}-local-image',
+  ref        ='{{.AppName}}-api-image',
   context    ='.',
-  entrypoint =['/api/{{.AppName}}-local'],
+  entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/{{.AppName}}-docker-local-api',
   only       =['./tmp'],
   live_update=[
@@ -37,7 +40,7 @@ docker_build_with_restart(
 )
 
 # deploying the API
-k8s_resource('{{.AppName}}-back', resource_deps=['{{.AppName}}-back-compile'])
+k8s_resource('{{.AppName}}-api-depl', resource_deps=['{{.AppName}}-api-compile'])
 
 # getting the load balancer's IP & port - cf https://docs.tilt.dev/extensions.html
 apiHost = str(local(echo_off=True, command="kubectl get services --namespace kube-system "+
@@ -52,6 +55,8 @@ webDepsCmd = 'npm install'
 if localDeps:
   # we need to link these libraries - making sure Vite's cache is refreshed
   webDepsCmd = 'rm -fr node_modules/.vite && npm link ' + ' '.join(localDeps)
+  # our Vite server will depend on the watching of these libraries
+  resource_deps=['{{.AppName}}-api-depl']
   # dealing with each local library
   for localDep in localDeps:
     # first, let's get its name
@@ -71,16 +76,41 @@ if localDeps:
         # cmd          ='npx tsc && npx vite build',
         # deps         =[localDepDir+'/package.json', localDepDir+'/lib'],
         )
+    # making Vite waiting for thid
+    resource_deps.append('refresh-'+localDepName)
 
-# locally running Vite's dev server - no need to containerize this for now
-local_resource(
-    name         ='{{.AppName}}-front-serve',
-    dir          ='{{.Web.Dir}}',
-    cmd          =webDepsCmd,
-    deps         =['{{.Web.Dir}}/package.json'],
-    serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':{{.API.Port}} npm run dev',
-    # serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':'+apiPort+' npm run dev',
-    serve_dir    ='{{.Web.Dir}}',
-    resource_deps=['{{.AppName}}-back'],
-    )
-`
+  # locally running Vite's dev server - no need to containerize this for now
+  local_resource(
+      name         ='{{.AppName}}-vite-serve',
+      dir          ='{{.Web.Dir}}',
+      cmd          =webDepsCmd,
+      deps         =['{{.Web.Dir}}/package.json'],
+      serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':{{.API.Port}} npm run dev',
+      # serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':'+apiPort+' npm run dev',
+      serve_dir    ='{{.Web.Dir}}',
+      resource_deps=resource_deps,
+      )
+else:
+  docker_build(
+    '{{.AppName}}-web-image',
+    context='.',
+    dockerfile='./{{.Deploying.Dir}}/{{.AppName}}-docker-local-web',
+    only=['{{.Web.Dir}}/'],
+    ignore=['{{.Web.Dir}}/dist/'],
+    live_update=[
+        fall_back_on('{{.Web.Dir}}/vite.config.js'),
+        sync('{{.Web.Dir}}/', '/web/'),
+        run(
+            'npm install',
+            trigger=['{{.Web.Dir}}/package.json', '{{.Web.Dir}}/package-json.lock']
+        )
+    ]
+  )
+
+  k8s_resource(
+      '{{.AppName}}-web-depl',
+      port_forwards='{{.Web.Port}}:5173', # 5173 is the port Vite listens on in the container
+      resource_deps=['{{.AppName}}-api-depl'],
+      # labels=['frontend']
+  )
+` // end of template
