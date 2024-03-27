@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type aldevConfig struct {
+type AldevConfig struct {
 	AppName string // the name of the app - beware: the key has to be "appname" in the YAML file
 	API     struct {
 		Dir    string // where the API's Goald-based code should be found
@@ -26,10 +26,10 @@ type aldevConfig struct {
 	}
 }
 
-func ReadConfig(cfgFileName string) *aldevConfig {
+func ReadConfig(cfgFileName string) *AldevConfig {
 	Debug("Reading Aldev config")
 
-	cfg := &aldevConfig{}
+	cfg := &AldevConfig{}
 
 	// Reading the config file into bytes
 	yamlBytes, errRead := os.ReadFile(cfgFileName)

@@ -4,15 +4,21 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"text/template"
 )
 
-func EnsureFileFromTemplate(cfg *aldevConfig, filepath, tpl string) {
+func EnsureFileFromTemplate(cfg *AldevConfig, filepath, tpl string, params ...any) {
 	Debug("Making sure this file exists: %s", filepath)
 
+	content := tpl
+	if len(params) > 0 {
+		content = fmt.Sprintf(content, params...)
+	}
+
 	// Create a new template
-	tmpl, errTpl := template.New(filepath).Parse(tpl)
+	tmpl, errTpl := template.New(filepath).Parse(content)
 	FatalIfErr(errTpl)
 
 	// Create a new file to write the result

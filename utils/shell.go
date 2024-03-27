@@ -14,24 +14,24 @@ import (
 	"time"
 )
 
-func RunWithCtx(ctx context.Context, longCommand string, params ...any) {
+func RunWithCtx(whyRunThis string, ctx context.Context, longCommand string, params ...any) {
 	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
-	runCmd(exec.CommandContext(ctx, commandElements[0], commandElements[1:]...), true, nil, Fatal)
+	runCmd(whyRunThis, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...), true, nil, Fatal)
 }
 
-func Run(longCommand string, params ...any) {
+func Run(whyRunThis string, longCommand string, params ...any) {
 	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
-	runCmd(exec.Command(commandElements[0], commandElements[1:]...), false, nil, Fatal)
+	runCmd(whyRunThis, exec.Command(commandElements[0], commandElements[1:]...), false, nil, Fatal)
 }
 
-func RunAndGet(errLogFn logFn, longCommand string, params ...any) []byte {
+func RunAndGet(whyRunThis string, errLogFn logFn, longCommand string, params ...any) []byte {
 	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
 	buffer := new(bytes.Buffer)
-	runCmd(exec.Command(commandElements[0], commandElements[1:]...), false, buffer, errLogFn)
+	runCmd(whyRunThis, exec.Command(commandElements[0], commandElements[1:]...), false, buffer, errLogFn)
 	return buffer.Bytes()
 }
 
-func runCmd(cmd *exec.Cmd, long bool, stdOutCapture io.Writer, errLogFn logFn) io.Writer {
+func runCmd(whyRunThis string, cmd *exec.Cmd, long bool, stdOutCapture io.Writer, errLogFn logFn) io.Writer {
 	// making sure we're showing everything the command will throw
 	cmd.Stderr = os.Stderr
 	if stdOutCapture != nil {
@@ -42,7 +42,7 @@ func runCmd(cmd *exec.Cmd, long bool, stdOutCapture io.Writer, errLogFn logFn) i
 
 	// bit of logging
 	if long {
-		Step("--- [SH.RUN]> Starting: '%s'", cmd.String())
+		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Starting: '%s'", cmd.String())
 	}
 	start := time.Now()
 
@@ -52,16 +52,16 @@ func runCmd(cmd *exec.Cmd, long bool, stdOutCapture io.Writer, errLogFn logFn) i
 		if long && ok && exitErr.ExitCode() == -1 {
 			fmt.Println("Command canceled due to context cancellation")
 		} else {
-			errLogFn("Command failed: %v", errRun.Error())
+			errLogFn("Command [%s] failed: %v", cmd.String(), errRun.Error())
 		}
 	}
 
 	// bit of logging
-	prefix := "Done"
 	if long {
-		prefix = "Finished"
+		Step("--- [SH.RUN]> Finished: '%s' in %s", cmd.String(), time.Since(start))
+	} else {
+		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Done: '%s' in %s", cmd.String(), time.Since(start))
 	}
-	Step("--- [SH.RUN]> %s: '%s' in %s", prefix, cmd.String(), time.Since(start))
 
 	return stdOutCapture
 }

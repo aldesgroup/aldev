@@ -5,18 +5,11 @@ package utils
 
 import (
 	"os"
+	"path"
 	"strings"
 )
 
-func EnsureNamespace(cfg *aldevConfig) {
-	Debug("Making sure the correct namespace exists")
-
-	if string(RunAndGet(Noop, "kubectl get namespace %s-local", cfg.AppName)) == "" {
-		Run("kubectl create namespace %s-local", cfg.AppName)
-	}
-}
-
-func EnsureConfigmap(cfg *aldevConfig) {
+func EnsureConfigmap(cfg *AldevConfig) {
 	Debug("Making sure the configmap is up-to-date")
 
 	// some controls first
@@ -27,15 +20,16 @@ func EnsureConfigmap(cfg *aldevConfig) {
 	FatalIfErr(errStat)
 
 	// (re)init the file
-	configMapFilename := cfg.Deploying.Dir + "/" + cfg.AppName + "-cm.yaml"
-	EnsureDir(cfg.Deploying.Dir)
+	baseDir := EnsureDir(cfg.Deploying.Dir, "base")
+	configMapFilename := path.Join(baseDir, cfg.AppName+"-cm.yaml")
 	WriteToFile(configMapFilename, "# generated from app-api/config.yaml by Aldev")
 
 	// creating the config map
 	cmd := "kubectl create configmap %s-configmap" // creating a configmap object here
-	cmd += " -n %s-local -o yaml"                  // not forgetting the namespace here, and we want a YAML output...
+	cmd += " -o yaml"                              // not forgetting the namespace here, and we want a YAML output...
 	cmd += " --dry-run=client --from-file=%s"      // ... so we dry-run this, from the config file found in the API sources
-	fileContentBytes := RunAndGet(Fatal, cmd, cfg.AppName, cfg.AppName, cfg.API.Config)
+	fileContentBytes := RunAndGet("We need to build a configmap from our API's config",
+		Fatal, cmd, cfg.AppName, cfg.API.Config)
 
 	// tweaking it
 	fileContent := string(fileContentBytes)

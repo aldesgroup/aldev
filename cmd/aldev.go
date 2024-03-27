@@ -5,7 +5,9 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -155,36 +157,62 @@ func asyncBuildAndDeploy(ctx context.Context) {
 	// making sure we clean up at the end
 	defer func() {
 		time.Sleep(100 * time.Millisecond)
-		utils.Info("We'll clean up the context now")
-		utils.Run("tilt down%s", options)
+		utils.Run("We'll clean up the context now", "tilt down%s", options)
 	}()
 
 	// making sure the config map is here and up-to-date
 	utils.EnsureConfigmap(cfg)
 
-	// making sure the right namespace exists
-	utils.EnsureNamespace(cfg)
+	// making sure some needed files are here: base local deployment
+	baseDir := utils.EnsureDir(cfg.Deploying.Dir, "base")
+	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
+	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-.yaml"), templates.API)
+	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-lb.yaml"), templates.LB)
+	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-web.yaml"), templates.Web)
 
-	// making sure some needed files are here
-	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-app-loc-deps.yaml", templates.AppLocal)
-	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-app.yaml", templates.AppLocal+templates.AppLocalFrontContainer)
-	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-docker-local-api", templates.DockerLocalAPI)
-	utils.EnsureFileFromTemplate(cfg, cfg.Deploying.Dir+"/"+cfg.AppName+"-docker-local-web", templates.DockerLocalWEB)
+	// docker files
+	dockerDir := utils.EnsureDir(cfg.Deploying.Dir, "docker")
+	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-api-docker"), templates.DockerLocalAPI)
+	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-web-docker"), templates.DockerLocalWEB)
+	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
+	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
+
+	// adding overlays
+	overlaysDir := utils.EnsureDir(cfg.Deploying.Dir, "overlays")
+	addOverlay(cfg, overlaysDir, "dev", nil)
+	addOverlay(cfg, overlaysDir, "local", [][]string{
+		{"patch-no-web-container.yaml", templates.NoWebContainerPatch},
+	})
+	addOverlay(cfg, overlaysDir, "sandbox", nil)
+	addOverlay(cfg, overlaysDir, "staging", nil)
+	addOverlay(cfg, overlaysDir, "production", nil)
+	// utils.EnsureFileFromTemplate(cfg, path.Join(localDepsDir, "patch-no-web-container.yaml"), templates.NoWebContainerPatch)
+
+	// deployment with Gitlab
+	utils.EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
+
+	// last but not least, the Tiltfile
 	utils.EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
 
+	// panic("stopping here for now")
+
 	// making sure the namespace is fresh
-	if string(utils.RunAndGet(utils.Fatal, "kubectl get all --namespace %s-local", cfg.AppName)) != "" {
-		utils.Info("The namespace needs some cleanup first")
-		utils.Run("tilt down%s", options)
+	kustomization := "dev"
+	if useLocalDeps {
+		kustomization = "local"
+	}
+	if string(utils.RunAndGet("We want to check what's in our namespace",
+		utils.Fatal, "kubectl get all --namespace %s-%s", cfg.AppName, kustomization)) != "" {
+		utils.Run("The namespace needs some cleanup first", "tilt down%s", options)
 	}
 
 	// Running a command that never finish with the cancelable context
-
 	mode := ""
 	if verbose {
 		mode = " --verbose --debug"
 	}
-	utils.RunWithCtx(ctx, "tilt up%s --stream%s", mode, options)
+	utils.RunWithCtx("Now we start Tilt to handle all the k8s deployments",
+		ctx, "tilt up%s --stream%s", mode, options)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()
@@ -193,6 +221,42 @@ func asyncBuildAndDeploy(ctx context.Context) {
 // ----------------------------------------------------------------------------
 // Command utils
 // ----------------------------------------------------------------------------
+
+// adding an overlay with its name; each patch should be at least: [0]: the filename, [1]: the template;
+// [2], [3], etc, are string format parameters to fill the "%s" placeholders in the template.
+func addOverlay(cfg *utils.AldevConfig, overlaysDir, overlayName string, patches [][]string) {
+	overlay := utils.EnsureDir(overlaysDir, overlayName)
+
+	// handling the patches at first
+	kustomizationPatches := ""
+	if patches != nil {
+		kustomizationPatches = "\n" + "patches:"
+		for _, patch := range patches {
+			// adding the patch to the kustomization file
+			if len(patch) < 2 {
+				utils.Fatal("Patches should be provided as at least 1 filename, and 1 template")
+			}
+			filename := patch[0]
+			template := patch[1]
+			kustomizationPatches += "\n" + "  - path: " + filename
+
+			// adding the file, from a template, with potential extra params
+			templateParams := []any{}
+			for i := 2; i < len(patch); i++ {
+				templateParams = append(templateParams, patch[i])
+			}
+			utils.EnsureFileFromTemplate(cfg, path.Join(overlay, filename), template, templateParams...)
+		}
+	}
+
+	// writing out the kustomization file, with its namespace resource
+	utils.EnsureFileFromTemplate(cfg, path.Join(overlay, "kustomization.yaml"),
+		templates.KustomizationOverlay+kustomizationPatches, overlayName, overlayName)
+	utils.EnsureFileFromTemplate(cfg, path.Join(overlay, fmt.Sprintf("namespace-%s.yaml", overlayName)),
+		templates.NewNamespace, overlayName)
+
+	// utils.EnsureFileFromTemplate(cfg, path.Join(overlay, "patch-no-web-container.yaml"), templates.NoWebContainerPatch)
+}
 
 func watcherFor(filepaths ...string) *fsnotify.Watcher {
 	// new watcher

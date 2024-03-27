@@ -12,9 +12,10 @@ localDeps = cfg.get('use-local')
 
 # describing the deployment of all the backend services, and their configuration
 if localDeps:
-  k8s_yaml(['{{.Deploying.Dir}}/{{.AppName}}-app-loc-deps.yaml', '{{.Deploying.Dir}}/{{.AppName}}-cm.yaml'])
+  k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/local'))
 else:
-  k8s_yaml(['{{.Deploying.Dir}}/{{.AppName}}-app.yaml', '{{.Deploying.Dir}}/{{.AppName}}-cm.yaml'])
+  # when working with no use of local deps, the base config is enough
+  k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/dev'))
 
 # --- API part ----------------------------------------------------------------
 
@@ -32,7 +33,7 @@ docker_build_with_restart(
   ref        ='{{.AppName}}-api-image',
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
-  dockerfile ='{{.Deploying.Dir}}/{{.AppName}}-docker-local-api',
+  dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
   only       =['./tmp'],
   live_update=[
     sync('./tmp', '/api'),
@@ -94,7 +95,7 @@ else:
   docker_build(
     '{{.AppName}}-web-image',
     context='.',
-    dockerfile='./{{.Deploying.Dir}}/{{.AppName}}-docker-local-web',
+    dockerfile='./{{.Deploying.Dir}}/docker/{{.AppName}}-local-web-docker',
     only=['{{.Web.Dir}}/'],
     ignore=['{{.Web.Dir}}/dist/'],
     live_update=[

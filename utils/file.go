@@ -6,10 +6,15 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path"
 )
 
-func EnsureDir(dirname string) {
+func EnsureDir(pathElem ...string) string {
+	dirname := path.Join(pathElem...)
+
 	FatalIfErr(os.MkdirAll(dirname, 0o755))
+
+	return dirname
 }
 
 func WriteToFile(filename string, content string, params ...any) {
