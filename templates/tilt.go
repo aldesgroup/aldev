@@ -23,7 +23,7 @@ else:
 local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='cd {{.API.Dir}} && go mod tidy && go build -o ../tmp/{{.AppName}}-api-local ./main && cd ..',
-    deps  =['{{.API.Dir}}', '../goald'], # taking into account the dependencies
+    deps  =['{{.API.Dir}}', '../goald', '{{.API.I18n.File}}'], # taking into account the dependencies
     ignore=['{{.API.Dir}}/go.sum', '{{.API.Config}}'],
     )
 

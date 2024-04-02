@@ -5,8 +5,9 @@ import (
 	"runtime/debug"
 )
 
-func Recover(msg string, params ...any) {
+func Recover(ctx CancelableContext, msg string, params ...any) {
 	if err := recover(); err != nil {
-		Error("Recovered from error [%v] while %s; Stack: %s", err, fmt.Sprintf(msg, params...), string(debug.Stack()))
+		Error("Recovered from error (%v) while %s; will cancel the whole process now; Stack: %s", err, fmt.Sprintf(msg, params...), string(debug.Stack()))
+		ctx.CancelAll()
 	}
 }

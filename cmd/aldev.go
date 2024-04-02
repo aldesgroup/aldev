@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path"
@@ -19,6 +18,19 @@ import (
 )
 
 // ----------------------------------------------------------------------------
+// Root command execution
+// ----------------------------------------------------------------------------
+
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the AldevCmd.
+func Execute() {
+	err := aldevCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+}
+
+// ----------------------------------------------------------------------------
 // Command declaration
 // ----------------------------------------------------------------------------
 
@@ -31,20 +43,11 @@ var aldevCmd = &cobra.Command{
 	Run: aldevRun,
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the AldevCmd.
-func Execute() {
-	err := aldevCmd.Execute()
-	if err != nil {
-		os.Exit(1)
-	}
-}
-
 var (
 	cfgFileName  string
 	verbose      bool
 	useLocalDeps bool
-	options      string
+	tiltOptions  string
 )
 
 func init() {
@@ -55,11 +58,27 @@ func init() {
 }
 
 // ----------------------------------------------------------------------------
+// Public accesses
+// ----------------------------------------------------------------------------
+
+func GetAldevCmd() *cobra.Command {
+	return aldevCmd
+}
+
+func GetConfigFilename() string {
+	return cfgFileName
+}
+
+func IsVerbose() bool {
+	return verbose
+}
+
+// ----------------------------------------------------------------------------
 // Main logic watching for some files, and (re)starting the building &
 // deploying function
 // ----------------------------------------------------------------------------
 
-func aldevRun(cmd *cobra.Command, args []string) {
+func aldevRun(command *cobra.Command, args []string) {
 	// it's only here that we have this variable valued
 	if verbose {
 		utils.SetVerbose()
@@ -69,13 +88,7 @@ func aldevRun(cmd *cobra.Command, args []string) {
 	cfg := utils.ReadConfig(cfgFileName)
 
 	// the main cancelable context, that should stop everything
-	mainCtx := utils.InitMainContext()
-
-	// a context for the loop below, and a cancellation function to get out of it
-	loopCtx, cancelLoopFn := context.WithCancel(context.Background())
-
-	// allowing to stop the loop from this main function
-	mainCtx.SetCancelLoopFn(cancelLoopFn)
+	aldevCtx := utils.InitAldevContext()
 
 	// adding a watcher to detect some file changes
 	watcher := watcherFor(cfg.API.Config, cfgFileName)
@@ -97,14 +110,8 @@ func aldevRun(cmd *cobra.Command, args []string) {
 						// caching to prevent stuttering
 						cache.SetDefault(event.String(), true)
 
-						// Cancel the previous execution of the function
-						cancelLoopFn()
-
-						// Recreate the context
-						loopCtx, cancelLoopFn = context.WithCancel(context.Background())
-
-						// allowing to stop the loop from this main function
-						mainCtx.SetCancelLoopFn(cancelLoopFn)
+						// cancelling the current loop context and restarting it
+						aldevCtx.RestartLoop()
 
 						// Waiting a bit for the previous execution to stop gracefully
 						time.Sleep(1000 * time.Millisecond) // todo wait for the clean up to be finished
@@ -113,7 +120,7 @@ func aldevRun(cmd *cobra.Command, args []string) {
 						utils.Step("Restarting the main function")
 
 						// go rebuilding & deploying the app again
-						go asyncBuildAndDeploy(loopCtx)
+						go asyncBuildAndDeploy(aldevCtx.GetLoopCtx())
 
 						// Waiting a bit for the new execution to start sufficiently
 						time.Sleep(1000 * time.Millisecond)
@@ -126,11 +133,14 @@ func aldevRun(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	// proceed to download external resources
+	go utils.DownloadExternalResources(aldevCtx, cfg)
+
 	// building & deploying the app
-	go asyncBuildAndDeploy(loopCtx)
+	go asyncBuildAndDeploy(aldevCtx.GetLoopCtx())
 
 	// not quitting while the context is still going
-	<-mainCtx.Done()
+	<-aldevCtx.Done()
 }
 
 // ----------------------------------------------------------------------------
@@ -138,26 +148,26 @@ func aldevRun(cmd *cobra.Command, args []string) {
 // ----------------------------------------------------------------------------
 
 // building & deploying the app
-func asyncBuildAndDeploy(ctx context.Context) {
+func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 	// making sure we recover any big crashing error
-	defer utils.Recover("building & deploying the app")
+	defer utils.Recover(ctx, "building & deploying the app")
 
 	// reading the Aldev config again, in case it has changed
 	cfg := utils.ReadConfig(cfgFileName)
 
 	// computing the custom options
 	if useLocalDeps && len(cfg.Web.LocalDeps) > 0 {
-		options = " --use-local "
-		options = options + strings.Join(cfg.Web.LocalDeps, options)
+		tiltOptions = " --use-local "
+		tiltOptions = tiltOptions + strings.Join(cfg.Web.LocalDeps, tiltOptions)
 	}
-	if options != "" {
-		options = " --" + options
+	if tiltOptions != "" {
+		tiltOptions = " --" + tiltOptions
 	}
 
 	// making sure we clean up at the end
 	defer func() {
 		time.Sleep(100 * time.Millisecond)
-		utils.Run("We'll clean up the context now", "tilt down%s", options)
+		utils.Run("We'll clean up the context now", "tilt down%s", tiltOptions)
 	}()
 
 	// making sure the config map is here and up-to-date
@@ -186,15 +196,12 @@ func asyncBuildAndDeploy(ctx context.Context) {
 	addOverlay(cfg, overlaysDir, "sandbox", nil)
 	addOverlay(cfg, overlaysDir, "staging", nil)
 	addOverlay(cfg, overlaysDir, "production", nil)
-	// utils.EnsureFileFromTemplate(cfg, path.Join(localDepsDir, "patch-no-web-container.yaml"), templates.NoWebContainerPatch)
 
 	// deployment with Gitlab
 	utils.EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
 
 	// last but not least, the Tiltfile
 	utils.EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
-
-	// panic("stopping here for now")
 
 	// making sure the namespace is fresh
 	kustomization := "dev"
@@ -203,7 +210,7 @@ func asyncBuildAndDeploy(ctx context.Context) {
 	}
 	if string(utils.RunAndGet("We want to check what's in our namespace",
 		utils.Fatal, "kubectl get all --namespace %s-%s", cfg.AppName, kustomization)) != "" {
-		utils.Run("The namespace needs some cleanup first", "tilt down%s", options)
+		utils.Run("The namespace needs some cleanup first", "tilt down%s", tiltOptions)
 	}
 
 	// Running a command that never finish with the cancelable context
@@ -212,7 +219,7 @@ func asyncBuildAndDeploy(ctx context.Context) {
 		mode = " --verbose --debug"
 	}
 	utils.RunWithCtx("Now we start Tilt to handle all the k8s deployments",
-		ctx, "tilt up%s --stream%s", mode, options)
+		ctx, "tilt up%s --stream%s", mode, tiltOptions)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()
@@ -254,8 +261,6 @@ func addOverlay(cfg *utils.AldevConfig, overlaysDir, overlayName string, patches
 		templates.KustomizationOverlay+kustomizationPatches, overlayName, overlayName)
 	utils.EnsureFileFromTemplate(cfg, path.Join(overlay, fmt.Sprintf("namespace-%s.yaml", overlayName)),
 		templates.NewNamespace, overlayName)
-
-	// utils.EnsureFileFromTemplate(cfg, path.Join(overlay, "patch-no-web-container.yaml"), templates.NoWebContainerPatch)
 }
 
 func watcherFor(filepaths ...string) *fsnotify.Watcher {

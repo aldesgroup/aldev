@@ -12,32 +12,70 @@ import (
 	"time"
 )
 
-type mainContext struct {
-	ctx          context.Context
-	mainCancelFn func()
-	cancelLoopFn func()
+type CancelableContext interface {
+	context.Context
+	CancelAll()
 }
 
-func (thisCtx *mainContext) SetCancelLoopFn(cancelLoopFn func()) {
-	thisCtx.cancelLoopFn = cancelLoopFn
+type baseCancelableContext struct {
+	context.Context
+	cancelFn func()
 }
 
-func (thisCtx *mainContext) cancelAll() {
-	thisCtx.cancelLoopFn()
+func newBaseCancelableContext() *baseCancelableContext {
+	ctx, cancelFn := context.WithCancel(context.Background())
+	return &baseCancelableContext{ctx, cancelFn}
+}
+
+func (thisCtx *baseCancelableContext) CancelAll() {
+	thisCtx.cancelFn()
+}
+
+// checking this base implem does satisfy the interface above
+var _ CancelableContext = (*baseCancelableContext)(nil)
+
+// an Aldev Context has a loop and allows to restart it
+type AldevContext interface {
+	CancelableContext
+	GetLoopCtx() CancelableContext
+	RestartLoop()
+}
+
+// an Aldev Context consists in a base context that can be canceled,
+// + a cancelable context for the loop over the files watched by Aldev directly
+type aldevContext struct {
+	baseCancelableContext
+	loopCtx *baseCancelableContext
+}
+
+func (aldevCtx *aldevContext) GetLoopCtx() CancelableContext {
+	return aldevCtx.loopCtx
+}
+
+func (aldevCtx *aldevContext) RestartLoop() {
+	// Cancel the current loop, and thus any function (which works with context) running inside
+	aldevCtx.loopCtx.cancelFn()
+
+	// Recreate the context
+	aldevCtx.loopCtx = newBaseCancelableContext()
+}
+
+// method override to cancel the loop context as well
+func (aldevCtx *aldevContext) CancelAll() {
+	aldevCtx.loopCtx.CancelAll()
 	Info("Waiting for some cleanup...")
 	time.Sleep(2000 * time.Millisecond) // TODO waiting
-	thisCtx.mainCancelFn()
+	aldevCtx.cancelFn()
 }
 
-func (thisCtx *mainContext) Done() <-chan struct{} {
-	return thisCtx.ctx.Done()
-}
+func InitAldevContext() *aldevContext {
+	// init
+	aldevCtx := &aldevContext{
+		baseCancelableContext: *newBaseCancelableContext(),
+		loopCtx:               newBaseCancelableContext(),
+	}
 
-func InitMainContext() *mainContext {
-	mainContext := &mainContext{}
-
-	// Initialize a cancelable context
-	mainContext.ctx, mainContext.mainCancelFn = context.WithCancel(context.Background())
+	// Initialize a context that can be interrupted:
 
 	// Initialize channel to receive signals
 	signalCh := make(chan os.Signal, 1)
@@ -49,8 +87,8 @@ func InitMainContext() *mainContext {
 		Warn("Received signal: %v", sig)
 
 		// Cancel the context on signal received
-		mainContext.cancelAll()
+		aldevCtx.CancelAll()
 	}()
 
-	return mainContext
+	return aldevCtx
 }

@@ -18,5 +18,10 @@ func EnsureDir(pathElem ...string) string {
 }
 
 func WriteToFile(filename string, content string, params ...any) {
+	// creating the intermediate directory if necessary
+	if filename != path.Base(filename) {
+		EnsureDir(path.Dir(filename))
+	}
+
 	FatalIfErr(os.WriteFile(filename, []byte(fmt.Sprintf(content, params...)), 0o644))
 }

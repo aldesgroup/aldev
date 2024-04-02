@@ -5,7 +5,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -14,7 +13,7 @@ import (
 	"time"
 )
 
-func RunWithCtx(whyRunThis string, ctx context.Context, longCommand string, params ...any) {
+func RunWithCtx(whyRunThis string, ctx CancelableContext, longCommand string, params ...any) {
 	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
 	runCmd(whyRunThis, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...), true, nil, Fatal)
 }

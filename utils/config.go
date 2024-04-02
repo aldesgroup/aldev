@@ -15,6 +15,11 @@ type AldevConfig struct {
 		Dir    string // where the API's Goald-based code should be found
 		Config string // the path to the config file for the API
 		Port   int    // the port used to expose the whole load-balanced API service
+		I18n   struct {
+			Link    string // the link to download the translations for the current app
+			KeySize int    // the max size of the key in the translation UID route.part.key
+			File    string // the path of the file where to write the downloaded translations
+		}
 	}
 	Web struct {
 		Dir       string   // where the Web app's GoaldR-based code should be found
