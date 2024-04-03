@@ -1,5 +1,5 @@
 package templates
-
+TODO ignore the generated files
 const Tiltfile = `# not sending data
 analytics_settings(enable=False)
 
@@ -22,7 +22,7 @@ else:
 # building the API's code
 local_resource(
     name  ='{{.AppName}}-api-compile',
-    cmd   ='cd {{.API.Dir}} && go mod tidy && go build -o ../tmp/{{.AppName}}-api-local ./main && cd ..',
+    cmd   ='aldev build',
     deps  =['{{.API.Dir}}', '../goald', '{{.API.I18n.File}}'], # taking into account the dependencies
     ignore=['{{.API.Dir}}/go.sum', '{{.API.Config}}'],
     )
@@ -34,9 +34,9 @@ docker_build_with_restart(
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
-  only       =['./tmp'],
+  only       =['./{{.Deploying.Tmp}}'],
   live_update=[
-    sync('./tmp', '/api'),
+    sync('./{{.Deploying.Tmp}}', '/api'),
   ],
 )
 

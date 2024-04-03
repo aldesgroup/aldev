@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,17 +15,76 @@ import (
 
 type CancelableContext interface {
 	context.Context
+	WithExecDir(string) CancelableContext
+	getExecDir() string
+	WithStdOutWriter(io.Writer) CancelableContext
+	getStdOutWriter() io.Writer
+	WithStdErrWriter(io.Writer) CancelableContext
+	getStdErrWriter() io.Writer
+	WithErrLogFn(logFn) CancelableContext
+	getErrLogFn() logFn
 	CancelAll()
 }
 
 type baseCancelableContext struct {
 	context.Context
-	cancelFn func()
+	cancelFn      func()
+	execDir       string
+	shortCommands bool
+	stdoutWriter  io.Writer
+	stderrWriter  io.Writer
+	errLogFn      logFn
+}
+
+func newBaseContext() *baseCancelableContext {
+	return &baseCancelableContext{
+		Context: context.WithoutCancel(context.Background()),
+	}
 }
 
 func newBaseCancelableContext() *baseCancelableContext {
 	ctx, cancelFn := context.WithCancel(context.Background())
-	return &baseCancelableContext{ctx, cancelFn}
+	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil}
+}
+
+func (thisCtx *baseCancelableContext) WithExecDir(dir string) CancelableContext {
+	thisCtx.execDir = dir
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) getExecDir() string {
+	return thisCtx.execDir
+}
+
+func (thisCtx *baseCancelableContext) WithStdOutWriter(writer io.Writer) CancelableContext {
+	thisCtx.stdoutWriter = writer
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) getStdOutWriter() io.Writer {
+	return thisCtx.stdoutWriter
+}
+
+func (thisCtx *baseCancelableContext) WithStdErrWriter(writer io.Writer) CancelableContext {
+	thisCtx.stderrWriter = writer
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) getStdErrWriter() io.Writer {
+	return thisCtx.stderrWriter
+}
+
+func (thisCtx *baseCancelableContext) WithErrLogFn(errLogFn logFn) CancelableContext {
+	thisCtx.errLogFn = errLogFn
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) getErrLogFn() logFn {
+	if thisCtx.errLogFn != nil {
+		return thisCtx.errLogFn
+	}
+
+	return Fatal
 }
 
 func (thisCtx *baseCancelableContext) CancelAll() {

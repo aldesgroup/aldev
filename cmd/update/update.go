@@ -45,9 +45,9 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext()
 
+	// TODO add installation / lib update step
+	// TODO add -deps to include go get -u -v ./main && git commit && git push
+
 	// proceed to download external resources
 	utils.DownloadExternalResources(aldevCtx, cfg)
-
-	// // not quitting while the context is still going
-	// <-aldevCtx.Done()
 }

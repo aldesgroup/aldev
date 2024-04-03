@@ -13,54 +13,81 @@ import (
 	"time"
 )
 
-func RunWithCtx(whyRunThis string, ctx CancelableContext, longCommand string, params ...any) {
-	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
-	runCmd(whyRunThis, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...), true, nil, Fatal)
+func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsString string, params ...any) {
+	// splitting the command elements as expected by the os/exec package
+	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
+
+	// running the command
+	runCmd(whyRunThis, ctx, logStart, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...))
 }
 
-func Run(whyRunThis string, longCommand string, params ...any) {
-	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
-	runCmd(whyRunThis, exec.Command(commandElements[0], commandElements[1:]...), false, nil, Fatal)
+func QuickRun(whyRunThis string, commandAsString string, params ...any) {
+	Run(whyRunThis, newBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
 }
 
-func RunAndGet(whyRunThis string, errLogFn logFn, longCommand string, params ...any) []byte {
-	commandElements := strings.Split(fmt.Sprintf(longCommand, params...), " ")
+func RunAndGet(whyRunThis string, commandAsString string, params ...any) []byte {
+	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
 	buffer := new(bytes.Buffer)
-	runCmd(whyRunThis, exec.Command(commandElements[0], commandElements[1:]...), false, buffer, errLogFn)
+	runCmd(whyRunThis, newBaseContext().WithStdOutWriter(buffer), false, exec.Command(commandElements[0], commandElements[1:]...))
 	return buffer.Bytes()
 }
 
-func runCmd(whyRunThis string, cmd *exec.Cmd, long bool, stdOutCapture io.Writer, errLogFn logFn) io.Writer {
+func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exec.Cmd) {
+	// making sure we have a non-nil context here
+	ctx := ctxArg
+	if ctx == nil {
+		ctx = newBaseContext()
+	}
+
 	// making sure we're showing everything the command will throw
-	cmd.Stderr = os.Stderr
-	if stdOutCapture != nil {
-		cmd.Stdout = stdOutCapture
+	if ctx.getStdOutWriter() != nil {
+		cmd.Stdout = ctx.getStdOutWriter()
 	} else {
 		cmd.Stdout = os.Stdout
 	}
 
-	// bit of logging
-	if long {
-		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Starting: '%s'", cmd.String())
+	if ctx.getStdErrWriter() != nil {
+		cmd.Stderr = ctx.getStdErrWriter()
+	} else {
+		cmd.Stderr = os.Stderr
 	}
+
+	// changing the execution directory if needed
+	fromDirString := ""
+	if ctx.getExecDir() != "" {
+		cmd.Dir = ctx.getExecDir()
+		fromDirString = " [from " + cmd.Dir + "]"
+	}
+
+	// bit of logging
+	if logStart {
+		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Starting%s: '%s'", fromDirString, cmd.String())
+	}
+
 	start := time.Now()
 
 	// actually running the command
 	if errRun := cmd.Run(); errRun != nil {
 		exitErr, ok := errRun.(*exec.ExitError)
-		if long && ok && exitErr.ExitCode() == -1 {
-			fmt.Println("Command canceled due to context cancellation")
+		if logStart && ok && exitErr.ExitCode() == -1 {
+			Info("Command canceled due to context cancellation")
 		} else {
-			errLogFn("Command [%s] failed: %v", cmd.String(), errRun.Error())
+			// let's re-run to have more info, if needed
+			if ctx.getStdErrWriter() != os.Stderr {
+				Error("Command [%s] failed: %v", cmd.String(), errRun.Error())
+				Run("Re-running the command to get the error logs",
+					newBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, cmd.String())
+			} else {
+				ctx.getErrLogFn()("Command [%s] failed: %v", cmd.String(), errRun.Error())
+			}
+
 		}
 	}
 
 	// bit of logging
-	if long {
-		Step("--- [SH.RUN]> Finished: '%s' in %s", cmd.String(), time.Since(start))
+	if logStart {
+		Step("--- [SH.RUN]> Finished%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
 	} else {
-		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Done: '%s' in %s", cmd.String(), time.Since(start))
+		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Done%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
 	}
-
-	return stdOutCapture
 }

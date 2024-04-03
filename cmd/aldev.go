@@ -167,7 +167,7 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 	// making sure we clean up at the end
 	defer func() {
 		time.Sleep(100 * time.Millisecond)
-		utils.Run("We'll clean up the context now", "tilt down%s", tiltOptions)
+		utils.Run("We'll clean up the context now", ctx, false, "tilt down%s", tiltOptions)
 	}()
 
 	// making sure the config map is here and up-to-date
@@ -209,8 +209,8 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 		kustomization = "local"
 	}
 	if string(utils.RunAndGet("We want to check what's in our namespace",
-		utils.Fatal, "kubectl get all --namespace %s-%s", cfg.AppName, kustomization)) != "" {
-		utils.Run("The namespace needs some cleanup first", "tilt down%s", tiltOptions)
+		"kubectl get all --namespace %s-%s", cfg.AppName, kustomization)) != "" {
+		utils.Run("The namespace needs some cleanup first", ctx, false, "tilt down%s", tiltOptions)
 	}
 
 	// Running a command that never finish with the cancelable context
@@ -218,8 +218,8 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 	if verbose {
 		mode = " --verbose --debug"
 	}
-	utils.RunWithCtx("Now we start Tilt to handle all the k8s deployments",
-		ctx, "tilt up%s --stream%s", mode, tiltOptions)
+	utils.Run("Now we start Tilt to handle all the k8s deployments",
+		ctx, false, "tilt up%s --stream%s", mode, tiltOptions)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()

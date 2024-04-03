@@ -27,6 +27,7 @@ type AldevConfig struct {
 		Port      int      // the port used to expose the app's frontend
 	}
 	Deploying struct { // Section for the local deployment of the app
+		Tmp string // a folder for temporary resources - which must be gitignored BTW
 		Dir string // where all the deploying config should be
 	}
 }
