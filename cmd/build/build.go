@@ -39,6 +39,7 @@ func init() {
 // deploying function
 // ----------------------------------------------------------------------------
 
+// TODO handle compilation errors = rollbacks on previous situation
 func aldevUpdateRun(command *cobra.Command, args []string) {
 	start := time.Now()
 

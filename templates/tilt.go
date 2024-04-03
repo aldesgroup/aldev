@@ -1,5 +1,5 @@
 package templates
-TODO ignore the generated files
+
 const Tiltfile = `# not sending data
 analytics_settings(enable=False)
 
@@ -24,7 +24,7 @@ local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='aldev build',
     deps  =['{{.API.Dir}}', '../goald', '{{.API.I18n.File}}'], # taking into account the dependencies
-    ignore=['{{.API.Dir}}/go.sum', '{{.API.Config}}'],
+    ignore=['{{.API.Dir}}/go.sum', '{{.API.Dir}}/_generated', '{{.API.Config}}'], # the API config is ignored here, but Aldev watches it
     )
 
 # describing the containers for the backend - cf https://docs.tilt.dev/extensions.html
