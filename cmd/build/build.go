@@ -2,6 +2,7 @@ package build
 
 import (
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/aldesgroup/aldev/cmd"
@@ -23,15 +24,14 @@ var aldevBuildCmd = &cobra.Command{
 }
 
 var (
-// cfgFileName  string
-// verbose      bool
-// useLocalDeps bool
-// options      string
+	compilationOnly bool
 )
 
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevBuildCmd)
+
+	aldevBuildCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
 }
 
 // ----------------------------------------------------------------------------
@@ -52,14 +52,15 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// making sure we're applying what's decided in the go.mod file
 	utils.Run("Making sure we're using the right set of dependencies", buildCtx, false, "go mod tidy")
 
-	// build command
+	// repeated commands
 	mainBuildCmd := fmt.Sprintf("go build -o ../%s/%s-api-local ./main", cfg.Deploying.Tmp, cfg.AppName)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s", cfg.Deploying.Tmp, cfg.AppName, cfg.API.Config)
 
 	// compilation n°1
 	utils.Run("Making sure the code compiles before going any further", buildCtx, false, mainBuildCmd)
-
-	// run command
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s", cfg.Deploying.Tmp, cfg.AppName, cfg.API.Config)
+	if compilationOnly {
+		goto Exit
+	}
 
 	// generation step n°1
 	utils.QuickRun("Generating stuff: DB list, BO registry...", mainRunCmd+" -codegen 1")
@@ -73,6 +74,10 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// compilation n°3
 	utils.Run("Does it still compile after codegen step 2?", buildCtx, false, mainBuildCmd)
 
+Exit:
+	// formatting
+	utils.QuickRun("Formatting the code", "gofumpt -w %s", path.Join(cfg.API.Dir, "_generated"))
+
 	// bit og logging
-	utils.Info("Aldev code generation & build done in %s", time.Since(start))
+	utils.Info("Aldev build done in %s", time.Since(start))
 }
