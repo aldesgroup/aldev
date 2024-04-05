@@ -20,6 +20,7 @@ type AldevConfig struct {
 			KeySize int    // the max size of the key in the translation UID route.part.key
 			File    string // the path of the file where to write the downloaded translations
 		}
+		RelBinDir string // folder where to put the compiled binary, relatively to the API directory
 	}
 	Web struct {
 		Dir       string   // where the Web app's GoaldR-based code should be found
@@ -27,7 +28,6 @@ type AldevConfig struct {
 		Port      int      // the port used to expose the app's frontend
 	}
 	Deploying struct { // Section for the local deployment of the app
-		Tmp string // a folder for temporary resources - which must be gitignored BTW
 		Dir string // where all the deploying config should be
 	}
 }

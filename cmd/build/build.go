@@ -52,9 +52,15 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// making sure we're applying what's decided in the go.mod file
 	utils.Run("Making sure we're using the right set of dependencies", buildCtx, false, "go mod tidy")
 
+	// control
+	if cfg.API.RelBinDir == "" {
+		utils.Fatal("Aldev config item `.api.relbindir` (relative path for the bin folder from the API directory) is empty!")
+	}
+
 	// repeated commands
-	mainBuildCmd := fmt.Sprintf("go build -o ../%s/%s-api-local ./main", cfg.Deploying.Tmp, cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s", cfg.Deploying.Tmp, cfg.AppName, cfg.API.Config)
+	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.RelBinDir, cfg.AppName)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s -libmode",
+		path.Join(cfg.API.Dir, cfg.API.RelBinDir), cfg.AppName, cfg.API.Config, cfg.API.Dir)
 
 	// compilation n°1
 	utils.Run("Making sure the code compiles before going any further", buildCtx, false, mainBuildCmd)
