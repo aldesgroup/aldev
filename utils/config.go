@@ -12,7 +12,7 @@ import (
 type AldevConfig struct {
 	AppName string // the name of the app - beware: the key has to be "appname" in the YAML file
 	API     struct {
-		Dir    string // where the API's Goald-based code should be found
+		SrcDir string // where the API's Goald-based code should be found
 		Config string // the path to the config file for the API
 		Port   int    // the port used to expose the whole load-balanced API service
 		I18n   struct {
@@ -20,10 +20,13 @@ type AldevConfig struct {
 			KeySize int    // the max size of the key in the translation UID route.part.key
 			File    string // the path of the file where to write the downloaded translations
 		}
-		RelBinDir string // folder where to put the compiled binary, relatively to the API directory
+		Build struct {
+			BinDir  string // folder where to put the compiled binary, relatively to the API directory
+			Library bool   // if true, then we're "aldeveloping" a library here
+		}
 	}
 	Web struct {
-		Dir       string   // where the Web app's GoaldR-based code should be found
+		SrcDir    string   // where the Web app's GoaldR-based code should be found
 		LocalDeps []string // the names of the modules to use locally (npm link); e.g. @aldes/emeraldr, or goaldr
 		Port      int      // the port used to expose the app's frontend
 	}

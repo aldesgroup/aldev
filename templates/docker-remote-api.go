@@ -18,7 +18,7 @@ RUN git config --global --add url."https://${GITHUB_TOKEN}:@github.com/aldesgrou
 WORKDIR /build
 
 # Copy the local package files to the container's workspace
-COPY {{.API.Dir}} .
+COPY {{.API.SrcDir}} .
 
 # Build the backend application inside the container
 RUN go build -o {{.AppName}}-api ./main

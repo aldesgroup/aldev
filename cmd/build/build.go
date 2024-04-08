@@ -47,20 +47,26 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	cfg := utils.ReadConfig(cmd.GetConfigFilename())
 
 	// the context to build Go sources
-	buildCtx := utils.InitAldevContext().WithExecDir(cfg.API.Dir)
+	buildCtx := utils.InitAldevContext().WithExecDir(cfg.API.SrcDir)
 
 	// making sure we're applying what's decided in the go.mod file
 	utils.Run("Making sure we're using the right set of dependencies", buildCtx, false, "go mod tidy")
 
 	// control
-	if cfg.API.RelBinDir == "" {
-		utils.Fatal("Aldev config item `.api.relbindir` (relative path for the bin folder from the API directory) is empty!")
+	if cfg.API.Build.BinDir == "" {
+		utils.Fatal("Aldev config item `.api.build.bindir` (relative path for the bin folder from the API directory) is empty!")
+	}
+
+	// some args for the code generation part
+	libraryArg := ""
+	if cfg.API.Build.Library {
+		libraryArg = " -library"
 	}
 
 	// repeated commands
-	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.RelBinDir, cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s -libmode",
-		path.Join(cfg.API.Dir, cfg.API.RelBinDir), cfg.AppName, cfg.API.Config, cfg.API.Dir)
+	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.Build.BinDir, cfg.AppName)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s"+libraryArg,
+		path.Join(cfg.API.SrcDir, cfg.API.Build.BinDir), cfg.AppName, cfg.API.Config, cfg.API.SrcDir)
 
 	// compilation n°1
 	utils.Run("Making sure the code compiles before going any further", buildCtx, false, mainBuildCmd)
@@ -82,7 +88,7 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 
 Exit:
 	// formatting
-	utils.QuickRun("Formatting the code", "gofumpt -w %s", path.Join(cfg.API.Dir, "_generated"))
+	utils.QuickRun("Formatting the code", "gofumpt -w %s", path.Join(cfg.API.SrcDir, "_generated"))
 
 	// bit og logging
 	utils.Info("Aldev build done in %s", time.Since(start))

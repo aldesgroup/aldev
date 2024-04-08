@@ -23,8 +23,8 @@ else:
 local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='aldev build',
-    deps  =['{{.API.Dir}}', '../goald', '{{.API.I18n.File}}'], # taking into account the dependencies
-    ignore=['{{.API.Dir}}/go.sum', '{{.API.Dir}}/_generated', '{{.API.Config}}'], # the API config is ignored here, but Aldev watches it
+    deps  =['{{.API.SrcDir}}', '../goald', '{{.API.I18n.File}}'], # taking into account the dependencies
+    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.Config}}'], # the API config is ignored here, but Aldev watches it
     )
 
 # describing the containers for the backend - cf https://docs.tilt.dev/extensions.html
@@ -34,9 +34,9 @@ docker_build_with_restart(
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
-  only       =['./{{.API.RelBinDir}}'],
+  only       =['./{{.API.Build.BinDir}}'],
   live_update=[
-    sync('./{{.API.RelBinDir}}', '/api'),
+    sync('./{{.API.Build.BinDir}}', '/api'),
   ],
 )
 
@@ -83,12 +83,12 @@ if localDeps:
   # locally running Vite's dev server - no need to containerize this for now
   local_resource(
       name         ='{{.AppName}}-vite-serve',
-      dir          ='{{.Web.Dir}}',
+      dir          ='{{.Web.SrcDir}}',
       cmd          =webDepsCmd,
-      deps         =['{{.Web.Dir}}/package.json'],
+      deps         =['{{.Web.SrcDir}}/package.json'],
       serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':{{.API.Port}} npm run dev',
       # serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':'+apiPort+' npm run dev',
-      serve_dir    ='{{.Web.Dir}}',
+      serve_dir    ='{{.Web.SrcDir}}',
       resource_deps=resource_deps,
       )
 else:
@@ -96,14 +96,14 @@ else:
     '{{.AppName}}-web-image',
     context='.',
     dockerfile='./{{.Deploying.Dir}}/docker/{{.AppName}}-local-web-docker',
-    only=['{{.Web.Dir}}/'],
-    ignore=['{{.Web.Dir}}/dist/'],
+    only=['{{.Web.SrcDir}}/'],
+    ignore=['{{.Web.SrcDir}}/dist/'],
     live_update=[
-        fall_back_on('{{.Web.Dir}}/vite.config.js'),
-        sync('{{.Web.Dir}}/', '/web/'),
+        fall_back_on('{{.Web.SrcDir}}/vite.config.js'),
+        sync('{{.Web.SrcDir}}/', '/web/'),
         run(
             'npm install',
-            trigger=['{{.Web.Dir}}/package.json', '{{.Web.Dir}}/package-json.lock']
+            trigger=['{{.Web.SrcDir}}/package.json', '{{.Web.SrcDir}}/package-json.lock']
         )
     ]
   )

@@ -7,13 +7,13 @@ FROM node:alpine AS builder
 WORKDIR /web
 
 # Copy package.json and package-lock.json files
-COPY {{.Web.Dir}}/package*.json ./
+COPY {{.Web.SrcDir}}/package*.json ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy the rest of the application code
-COPY {{.Web.Dir}}/. .
+COPY {{.Web.SrcDir}}/. .
 
 # Build the React app
 RUN npm run build
