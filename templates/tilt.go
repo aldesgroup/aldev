@@ -34,9 +34,9 @@ docker_build_with_restart(
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
-  only       =['./{{.API.Build.BinDir}}'],
+  only       =['./{{.API.Build.ResolvedBinDir}}'],
   live_update=[
-    sync('./{{.API.Build.BinDir}}', '/api'),
+    sync('./{{.API.Build.ResolvedBinDir}}', '/api'),
   ],
 )
 

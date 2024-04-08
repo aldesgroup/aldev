@@ -5,6 +5,7 @@ package utils
 
 import (
 	"os"
+	"path"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,8 +22,9 @@ type AldevConfig struct {
 			File    string // the path of the file where to write the downloaded translations
 		}
 		Build struct {
-			BinDir  string // folder where to put the compiled binary, relatively to the API directory
-			Library bool   // if true, then we're "aldeveloping" a library here
+			BinDir         string // folder where to put the compiled binary, relatively to the API directory
+			ResolvedBinDir string // the bin directory, relatively to the project's rool
+			Library        bool   // if true, then we're "aldeveloping" a library here
 		}
 	}
 	Web struct {
@@ -46,6 +48,9 @@ func ReadConfig(cfgFileName string) *AldevConfig {
 
 	// Unmarshalling the YAML file
 	FatalIfErr(yaml.Unmarshal(yamlBytes, cfg))
+
+	// Some useful computation
+	cfg.API.Build.ResolvedBinDir = path.Join(cfg.API.SrcDir, cfg.API.Build.BinDir)
 
 	return cfg
 }

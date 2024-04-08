@@ -66,7 +66,7 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// repeated commands
 	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.Build.BinDir, cfg.AppName)
 	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s"+libraryArg,
-		path.Join(cfg.API.SrcDir, cfg.API.Build.BinDir), cfg.AppName, cfg.API.Config, cfg.API.SrcDir)
+		cfg.API.Build.ResolvedBinDir, cfg.AppName, cfg.API.Config, cfg.API.SrcDir)
 
 	// compilation n°1
 	utils.Run("Making sure the code compiles before going any further", buildCtx, false, mainBuildCmd)
