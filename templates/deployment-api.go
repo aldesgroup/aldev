@@ -21,7 +21,7 @@ spec:
         - name: {{.AppName}}-api
           image: {{.AppName}}-api-image
           args:
-            - "-config=config/config.yaml"
+            - "-config=config/{{.API.Config}}"
           volumeMounts:
           - name: config-volume
             mountPath: /api/config

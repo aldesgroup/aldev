@@ -13,6 +13,6 @@ spec:
   ports:
     - name: http
       port: {{.API.Port}} # load balancer port (external) - set by Aldev
-      targetPort: 55555 # API port (internal) - should not be changed
+      targetPort: 55555 # must match the API's 'Common.http.port' config item
   type: LoadBalancer
 `

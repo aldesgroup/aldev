@@ -11,12 +11,13 @@ import (
 
 func EnsureConfigmap(cfg *AldevConfig) {
 	Debug("Making sure the configmap is up-to-date")
+	configFilepath := path.Join(cfg.API.SrcDir, cfg.API.Config)
 
 	// some controls first
 	if cfg.Deploying.Dir == "" {
 		Fatal("Empty 'deploying.dir' config!")
 	}
-	configFile, errStat := os.Stat(cfg.API.Config)
+	configFile, errStat := os.Stat(configFilepath)
 	FatalIfErr(errStat)
 
 	// (re)init the file
@@ -29,7 +30,7 @@ func EnsureConfigmap(cfg *AldevConfig) {
 	cmd += " -o yaml"                              // not forgetting the namespace here, and we want a YAML output...
 	cmd += " --dry-run=client --from-file=%s"      // ... so we dry-run this, from the config file found in the API sources
 	fileContentBytes := RunAndGet("We need to build a configmap from our API's config",
-		cmd, cfg.AppName, cfg.API.Config)
+		cmd, cfg.AppName, configFilepath)
 
 	// tweaking it
 	fileContent := string(fileContentBytes)

@@ -20,11 +20,12 @@ var aldevBuildCmd = &cobra.Command{
 	Short: "Builds the app with additional generated code to speed up your dev",
 	Long: "This generates additional code to provide you with useful handles on DB lists" +
 		"business object classes & their properties, and more. And rebuilds the whole app.",
-	Run: aldevUpdateRun,
+	Run: aldevBuildRun,
 }
 
 var (
 	compilationOnly bool
+	verbose         bool
 )
 
 func init() {
@@ -32,6 +33,7 @@ func init() {
 	cmd.GetAldevCmd().AddCommand(aldevBuildCmd)
 
 	aldevBuildCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
+	aldevBuildCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -40,7 +42,12 @@ func init() {
 // ----------------------------------------------------------------------------
 
 // TODO handle compilation errors = rollbacks on previous situation
-func aldevUpdateRun(command *cobra.Command, args []string) {
+func aldevBuildRun(command *cobra.Command, args []string) {
+	// it's only here that we have this variable valued
+	if verbose {
+		utils.SetVerbose()
+	}
+
 	start := time.Now()
 
 	// reading the Aldev config one first time
@@ -57,21 +64,22 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 		utils.Fatal("Aldev config item `.api.build.bindir` (relative path for the bin folder from the API directory) is empty!")
 	}
 
-	// some args for the code generation part
-	libraryArg := ""
-	if cfg.API.Build.Library {
-		libraryArg = " -library"
-	}
+	// // some args for the code generation part
+	// libraryArg := ""
+	// if cfg.API.Build.Library {
+	// 	libraryArg = " -library"
+	// }
 
 	// repeated commands
 	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.Build.BinDir, cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s"+libraryArg,
-		cfg.API.Build.ResolvedBinDir, cfg.AppName, cfg.API.Config, cfg.API.SrcDir)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", //+libraryArg,
+		cfg.API.Build.ResolvedBinDir, cfg.AppName, path.Join(cfg.API.SrcDir, cfg.API.Config), cfg.API.SrcDir)
 
-	// compilation n°1
-	utils.Run("Making sure the code compiles before going any further", buildCtx, false, mainBuildCmd)
+	// compilation n°1 - this is needed to have the run command up-to-date
+	utils.Run("Only compiling & formatting the code", buildCtx, false, mainBuildCmd)
+
 	if compilationOnly {
-		goto Exit
+		return
 	}
 
 	// generation step n°1
@@ -86,7 +94,7 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// compilation n°3
 	utils.Run("Does it still compile after codegen step 2?", buildCtx, false, mainBuildCmd)
 
-Exit:
+	// Exit:
 	// formatting
 	utils.QuickRun("Formatting the code", "gofumpt -w %s", path.Join(cfg.API.SrcDir, "_generated"))
 

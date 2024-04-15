@@ -14,7 +14,7 @@ type AldevConfig struct {
 	AppName string // the name of the app - beware: the key has to be "appname" in the YAML file
 	API     struct {
 		SrcDir string // where the API's Goald-based code should be found
-		Config string // the path to the config file for the API
+		Config string // the path to the config file for the API, from the API's folder
 		Port   int    // the port used to expose the whole load-balanced API service
 		I18n   struct {
 			Link    string // the link to download the translations for the current app
@@ -24,8 +24,9 @@ type AldevConfig struct {
 		Build struct {
 			BinDir         string // folder where to put the compiled binary, relatively to the API directory
 			ResolvedBinDir string // the bin directory, relatively to the project's rool
-			Library        bool   // if true, then we're "aldeveloping" a library here
+			// Library        bool   // if true, then we're "aldeveloping" a library here
 		}
+		DataDir string // where to find bootstraping data to run the app
 	}
 	Web struct {
 		SrcDir    string   // where the Web app's GoaldR-based code should be found

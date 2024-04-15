@@ -23,8 +23,10 @@ else:
 local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='aldev build',
-    deps  =['{{.API.SrcDir}}', '../goald', '{{.API.I18n.File}}'], # taking into account the dependencies
-    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.Config}}'], # the API config is ignored here, but Aldev watches it
+    # taking into account the dependencies
+    deps  =['{{.API.SrcDir}}', '../goald', '{{.API.I18n.File}}'], # TODO the change in the translation should not trigger a full rebuild
+    # the API config is also ignored here, because Aldev is already watching it
+    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.SrcDir}}/**/*_utils.go', '{{.API.Config}}'],
     )
 
 # describing the containers for the backend - cf https://docs.tilt.dev/extensions.html
@@ -34,9 +36,10 @@ docker_build_with_restart(
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
-  only       =['./{{.API.Build.ResolvedBinDir}}'],
+  only       =['./{{.API.Build.ResolvedBinDir}}', './{{.API.DataDir}}'],
   live_update=[
     sync('./{{.API.Build.ResolvedBinDir}}', '/api'),
+    sync('./{{.API.DataDir}}', '/api'),
   ],
 )
 

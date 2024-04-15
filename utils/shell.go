@@ -61,7 +61,10 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 
 	// bit of logging
 	if logStart {
-		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Starting%s: '%s'", fromDirString, cmd.String())
+		// but only in verbose mode
+		if verbose {
+			StepWithPreamble(whyRunThis, "--- [SH.RUN]> Starting%s: '%s'", fromDirString, cmd.String())
+		}
 	}
 
 	start := time.Now()
@@ -84,10 +87,12 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 		}
 	}
 
-	// bit of logging
-	if logStart {
-		Step("--- [SH.RUN]> Finished%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
-	} else {
-		StepWithPreamble(whyRunThis, "--- [SH.RUN]> Done%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
+	// bit of logging, only in verbose mode
+	if verbose {
+		if logStart {
+			Step("--- [SH.RUN]> Finished%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
+		} else {
+			StepWithPreamble(whyRunThis, "--- [SH.RUN]> Done%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
+		}
 	}
 }

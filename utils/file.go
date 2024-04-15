@@ -17,11 +17,15 @@ func EnsureDir(pathElem ...string) string {
 	return dirname
 }
 
-func WriteToFile(filename string, content string, params ...any) {
+func WriteToFileB(filename string, bytes []byte) {
 	// creating the intermediate directory if necessary
 	if filename != path.Base(filename) {
 		EnsureDir(path.Dir(filename))
 	}
 
-	FatalIfErr(os.WriteFile(filename, []byte(fmt.Sprintf(content, params...)), 0o644))
+	FatalIfErr(os.WriteFile(filename, bytes, 0o644))
+}
+
+func WriteToFile(filename string, content string, params ...any) {
+	WriteToFileB(filename, []byte(fmt.Sprintf(content, params...)))
 }

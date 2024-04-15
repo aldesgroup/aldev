@@ -91,7 +91,10 @@ func aldevRun(command *cobra.Command, args []string) {
 	aldevCtx := utils.InitAldevContext()
 
 	// adding a watcher to detect some file changes
-	watcher := watcherFor(cfg.API.Config, cfgFileName)
+	watcher := watcherFor( // watching for...
+		path.Join(cfg.API.SrcDir, cfg.API.Config), // the API's config
+		cfgFileName, // Aldev's config
+	)
 	defer watcher.Close()
 
 	// loop to react to these file changes
@@ -219,7 +222,7 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 		mode = " --verbose --debug"
 	}
 	utils.Run("Now we start Tilt to handle all the k8s deployments",
-		ctx, false, "tilt up%s --stream%s", mode, tiltOptions)
+		ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()
