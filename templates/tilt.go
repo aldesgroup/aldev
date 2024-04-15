@@ -24,7 +24,7 @@ local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='aldev build',
     # taking into account the dependencies
-    deps  =['{{.API.SrcDir}}', '../goald', '{{.API.I18n.File}}'], # TODO the change in the translation should not trigger a full rebuild
+    deps  =['{{.API.SrcDir}}', '../goald'],
     # the API config is also ignored here, because Aldev is already watching it
     ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.SrcDir}}/**/*_utils.go', '{{.API.Config}}'],
     )
