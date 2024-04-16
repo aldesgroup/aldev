@@ -26,7 +26,7 @@ local_resource(
     # taking into account the dependencies
     deps  =['{{.API.SrcDir}}', '../goald'],
     # the API config is also ignored here, because Aldev is already watching it
-    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.SrcDir}}/**/*_utils.go', '{{.API.Config}}'],
+    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.SrcDir}}/**/*--utils.go', '{{.API.Config}}'],
     )
 
 # describing the containers for the backend - cf https://docs.tilt.dev/extensions.html
