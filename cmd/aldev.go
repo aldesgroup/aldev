@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/aldesgroup/aldev/templates"
@@ -44,17 +43,23 @@ var aldevCmd = &cobra.Command{
 }
 
 var (
+	// flags
 	cfgFileName  string
 	verbose      bool
 	useLocalDeps bool
-	tiltOptions  string
+	onlyGenerate bool
+
+	// other global variables
+	tiltOptions string
 )
 
 func init() {
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
-	aldevCmd.PersistentFlags().BoolVarP(&useLocalDeps, "use-local-deps", "u", false,
+	aldevCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "l", false,
 		"to use the local dependencies declared in the config file")
+	aldevCmd.Flags().BoolVarP(&onlyGenerate, "generate-only", "g", false,
+		"to only generate the local files without trying run the apps")
 }
 
 // ----------------------------------------------------------------------------
@@ -140,7 +145,13 @@ func aldevRun(command *cobra.Command, args []string) {
 	go utils.DownloadExternalResources(aldevCtx, cfg)
 
 	// building & deploying the app
-	go asyncBuildAndDeploy(aldevCtx.GetLoopCtx())
+	go func() {
+		asyncBuildAndDeploy(aldevCtx.GetLoopCtx())
+
+		if onlyGenerate {
+			aldevCtx.CancelAll()
+		}
+	}()
 
 	// not quitting while the context is still going
 	<-aldevCtx.Done()
@@ -157,21 +168,6 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 
 	// reading the Aldev config again, in case it has changed
 	cfg := utils.ReadConfig(cfgFileName)
-
-	// computing the custom options
-	if useLocalDeps && len(cfg.Web.LocalDeps) > 0 {
-		tiltOptions = " --use-local "
-		tiltOptions = tiltOptions + strings.Join(cfg.Web.LocalDeps, tiltOptions)
-	}
-	if tiltOptions != "" {
-		tiltOptions = " --" + tiltOptions
-	}
-
-	// making sure we clean up at the end
-	defer func() {
-		time.Sleep(100 * time.Millisecond)
-		utils.Run("We'll clean up the context now", ctx, false, "tilt down%s", tiltOptions)
-	}()
 
 	// making sure the config map is here and up-to-date
 	utils.EnsureConfigmap(cfg)
@@ -216,16 +212,33 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 		utils.Run("The namespace needs some cleanup first", ctx, false, "tilt down%s", tiltOptions)
 	}
 
-	// Running a command that never finish with the cancelable context
-	mode := ""
-	if verbose {
-		mode = " --verbose --debug"
-	}
-	utils.Run("Now we start Tilt to handle all the k8s deployments",
-		ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
+	if !onlyGenerate {
+		// computing the custom options
+		if useLocalDeps /* && len(cfg.Web.LocalDeps) > 0 */ {
+			tiltOptions = " --use-local"
+			// tiltOptions = tiltOptions + strings.Join(cfg.Web.Loc/* alDeps, tiltOptions)
+		}
+		if tiltOptions != "" {
+			tiltOptions = " --" + tiltOptions
+		}
 
-	// Wait for the context to be canceled or the program to exit
-	<-ctx.Done()
+		// making sure we clean up at the end
+		defer func() {
+			time.Sleep(100 * time.Millisecond)
+			utils.Run("We'll clean up the context now", ctx, false, "tilt down%s", tiltOptions)
+		}()
+
+		// Running a command that never finish with the cancelable context
+		mode := ""
+		if verbose {
+			mode = " --verbose --debug"
+		}
+		utils.Run("Now we start Tilt to handle all the k8s deployments",
+			ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
+
+		// Wait for the context to be canceled or the program to exit
+		<-ctx.Done()
+	}
 }
 
 // ----------------------------------------------------------------------------

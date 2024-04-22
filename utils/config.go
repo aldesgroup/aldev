@@ -29,9 +29,8 @@ type AldevConfig struct {
 		DataDir string // where to find bootstraping data to run the app
 	}
 	Web struct {
-		SrcDir    string   // where the Web app's GoaldR-based code should be found
-		LocalDeps []string // the names of the modules to use locally (npm link); e.g. @aldes/emeraldr, or goaldr
-		Port      int      // the port used to expose the app's frontend
+		SrcDir string // where the Web app's GoaldR-based code should be found
+		Port   int    // the port used to expose the app's frontend
 	}
 	Deploying struct { // Section for the local deployment of the app
 		Dir string // where all the deploying config should be

@@ -6,12 +6,12 @@ analytics_settings(enable=False)
 # --- Preparation -------------------------------------------------------------
 
 # custom config
-config.define_string_list('use-local', usage='use this to include our own libraries in dev mode (like goaldr)')
+config.define_bool('use-local', usage='use this to include our own libraries in dev mode (like goaldr)')
 cfg = config.parse()
-localDeps = cfg.get('use-local')
+useLocalDeps = cfg.get('use-local')
 
 # describing the deployment of all the backend services, and their configuration
-if localDeps:
+if useLocalDeps:
   k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/local'))
 else:
   # when working with no use of local deps, the base config is enough
@@ -52,47 +52,39 @@ apiHost = str(local(echo_off=True, command="kubectl get services --namespace kub
 
 # --- WEB part ----------------------------------------------------------------
 
-# the command to make sure we have the right set of dependencies
-webDepsCmd = 'npm install'
-
 # if we're developing libraries along with this project, then:
-if localDeps:
-  # we need to link these libraries - making sure Vite's cache is refreshed
-  webDepsCmd = 'rm -fr node_modules/.vite && npm link ' + ' '.join(localDeps)
-  # our Vite server will depend on the watching of these libraries
-  resource_deps=['{{.AppName}}-api-depl']
-  # dealing with each local library
-  for localDep in localDeps:
-    # first, let's get its name
-    localDepName = localDep
-    if "/" in localDep:
-      localDepName = localDep[localDep.index("/")+1:]
-    # we assume all the Git projects to be in the same folder for now
-    localDepDir = '../' + localDepName
-    warn("using the local dependency '"+localDep+"' from '"+localDepDir)
-    # now making sure we're refreshing it each time it changes
-    local_resource(
-        name         ='refresh-'+localDepName,
-        serve_dir    =localDepDir,
-        serve_cmd    ='npx tsc && npx vite build --watch',
-        # if running TSC is not needed at each change, else use what's commented below instead
-        # dir          =localDepDir,
-        # cmd          ='npx tsc && npx vite build',
-        # deps         =[localDepDir+'/package.json', localDepDir+'/lib'],
-        )
-    # making Vite waiting for thid
-    resource_deps.append('refresh-'+localDepName)
+if useLocalDeps:
+  # continuously building GoaldR
+  local_resource(
+    name         ='refresh-goaldr',
+    dir          ='../goaldr',
+    cmd          ='npx tsc && npx vite build',
+    deps         ='../goaldr/lib',
+    # serve_dir    ='../goaldr',
+    # serve_cmd    ='npm run dev',
+    resource_deps=['myeq-api-depl'],
+    )
+
+  # continuously building EmeraldR
+  local_resource(
+    name         ='refresh-emeraldr',
+    dir          ='../emeraldr',
+    cmd          ='rm -fr node_modules/.vite && npm link goaldr && npx tsc && npx vite build',
+    deps         =['../emeraldr/lib', '../goaldr/dist'],
+    # serve_dir    ='../emeraldr',
+    # serve_cmd    ='npm run dev',
+    resource_deps=['refresh-goaldr'],
+    )
 
   # locally running Vite's dev server - no need to containerize this for now
   local_resource(
       name         ='{{.AppName}}-vite-serve',
       dir          ='{{.Web.SrcDir}}',
-      cmd          =webDepsCmd,
+      cmd          ='rm -fr node_modules/.vite && npm link goaldr @aldes/emeraldr',
       deps         =['{{.Web.SrcDir}}/package.json'],
       serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':{{.API.Port}} npm run dev',
-      # serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':'+apiPort+' npm run dev',
       serve_dir    ='{{.Web.SrcDir}}',
-      resource_deps=resource_deps,
+      resource_deps=['refresh-emeraldr'],
       )
 else:
   docker_build(
