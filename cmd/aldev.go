@@ -59,7 +59,7 @@ func init() {
 	aldevCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "l", false,
 		"to use the local dependencies declared in the config file")
 	aldevCmd.Flags().BoolVarP(&onlyGenerate, "generate-only", "g", false,
-		"to only generate the local files without trying run the apps")
+		"to only generate the local files without trying to run the apps")
 }
 
 // ----------------------------------------------------------------------------
@@ -143,6 +143,9 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// proceed to download external resources
 	go utils.DownloadExternalResources(aldevCtx, cfg)
+
+	// install the pre-commit hook
+	go utils.InstallGitHooks(aldevCtx, cfg)
 
 	// building & deploying the app
 	go func() {
