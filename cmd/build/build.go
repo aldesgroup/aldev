@@ -54,7 +54,7 @@ func aldevBuildRun(command *cobra.Command, args []string) {
 	cfg := utils.ReadConfig(cmd.GetConfigFilename())
 
 	// the context to build Go sources
-	buildCtx := utils.InitAldevContext().WithExecDir(cfg.API.SrcDir)
+	buildCtx := utils.InitAldevContext(100, nil).WithExecDir(cfg.API.SrcDir)
 
 	// making sure we're applying what's decided in the go.mod file
 	utils.Run("Making sure we're using the right set of dependencies", buildCtx, false, "go mod tidy")
@@ -98,6 +98,6 @@ func aldevBuildRun(command *cobra.Command, args []string) {
 	// formatting
 	utils.QuickRun("Formatting the code", "gofumpt -w %s", path.Join(cfg.API.SrcDir, "_generated"))
 
-	// bit og logging
+	// bit of logging
 	utils.Info("Aldev build done in %s", time.Since(start))
 }

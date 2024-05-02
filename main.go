@@ -6,6 +6,7 @@ package main
 import (
 	"github.com/aldesgroup/aldev/cmd"
 	_ "github.com/aldesgroup/aldev/cmd/build"
+	_ "github.com/aldesgroup/aldev/cmd/swap"
 	_ "github.com/aldesgroup/aldev/cmd/update"
 )
 

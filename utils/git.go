@@ -7,12 +7,12 @@ package utils
 import "github.com/aldesgroup/aldev/templates"
 
 const (
-	tagHOTSWAPPED = "___HOTSWAPPED___"
+	TagHOTSWAPPED = "___HOTSWAPPED___"
 )
 
 // Installing Git hooks to unify our practices
 func InstallGitHooks(ctx CancelableContext, cfg *AldevConfig) {
 	file := ".git/hooks/pre-commit"
-	EnsureFileFromTemplate(cfg, file, templates.GitHookPRECOMMIT, tagHOTSWAPPED)
+	EnsureFileFromTemplate(cfg, file, templates.GitHookPRECOMMIT, TagHOTSWAPPED)
 	Run("Activating the pre-commit hook", ctx, false, "chmod +x %s", file)
 }

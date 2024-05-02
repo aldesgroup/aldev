@@ -93,10 +93,10 @@ func aldevRun(command *cobra.Command, args []string) {
 	cfg := utils.ReadConfig(cfgFileName)
 
 	// the main cancelable context, that should stop everything
-	aldevCtx := utils.InitAldevContext()
+	aldevCtx := utils.InitAldevContext(2000, nil)
 
 	// adding a watcher to detect some file changes
-	watcher := watcherFor( // watching for...
+	watcher := utils.WatcherFor( // watching for...
 		path.Join(cfg.API.SrcDir, cfg.API.Config), // the API's config
 		cfgFileName, // Aldev's config
 	)
@@ -146,6 +146,11 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// install the pre-commit hook
 	go utils.InstallGitHooks(aldevCtx, cfg)
+
+	// using Aldev swap when locally developping the dependencies alongside
+	if useLocalDeps {
+		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev swap")
+	}
 
 	// building & deploying the app
 	go func() {
@@ -217,9 +222,8 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 
 	if !onlyGenerate {
 		// computing the custom options
-		if useLocalDeps /* && len(cfg.Web.LocalDeps) > 0 */ {
+		if useLocalDeps {
 			tiltOptions = " --use-local"
-			// tiltOptions = tiltOptions + strings.Join(cfg.Web.Loc/* alDeps, tiltOptions)
 		}
 		if tiltOptions != "" {
 			tiltOptions = " --" + tiltOptions
@@ -280,18 +284,4 @@ func addOverlay(cfg *utils.AldevConfig, overlaysDir, overlayName string, patches
 		templates.KustomizationOverlay+kustomizationPatches, overlayName, overlayName)
 	utils.EnsureFileFromTemplate(cfg, path.Join(overlay, fmt.Sprintf("namespace-%s.yaml", overlayName)),
 		templates.NewNamespace, overlayName)
-}
-
-func watcherFor(filepaths ...string) *fsnotify.Watcher {
-	// new watcher
-	watcher, errNew := fsnotify.NewWatcher()
-	utils.FatalIfErr(errNew)
-
-	// watching the given files
-	for _, filepath := range filepaths {
-		utils.Info("Watching file: %s", filepath)
-		utils.FatalIfErr(watcher.Add(filepath))
-	}
-
-	return watcher
 }

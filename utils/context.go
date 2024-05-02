@@ -105,7 +105,9 @@ type AldevContext interface {
 // + a cancelable context for the loop over the files watched by Aldev directly
 type aldevContext struct {
 	baseCancelableContext
-	loopCtx *baseCancelableContext
+	loopCtx    *baseCancelableContext // context used for the loop run by aldev
+	exitWaitMs int                    // time waited right after cancelling the loop
+	stopFn     func()                 // funtion called when the user stops the program
 }
 
 func (aldevCtx *aldevContext) GetLoopCtx() CancelableContext {
@@ -122,17 +124,25 @@ func (aldevCtx *aldevContext) RestartLoop() {
 
 // method override to cancel the loop context as well
 func (aldevCtx *aldevContext) CancelAll() {
+	aldevCtx.stopFn()
 	aldevCtx.loopCtx.CancelAll()
 	Info("Waiting for some cleanup...")
-	time.Sleep(2000 * time.Millisecond) // TODO waiting
+	time.Sleep(time.Duration(aldevCtx.exitWaitMs) * time.Millisecond) // TODO waiting
 	aldevCtx.cancelFn()
 }
 
-func InitAldevContext() *aldevContext {
+func InitAldevContext(waitTimeMs int, stopFn func()) *aldevContext {
+	stopFunction := stopFn
+	if stopFn == nil {
+		stopFunction = func() {}
+	}
+
 	// init
 	aldevCtx := &aldevContext{
 		baseCancelableContext: *newBaseCancelableContext(),
 		loopCtx:               newBaseCancelableContext(),
+		exitWaitMs:            waitTimeMs,
+		stopFn:                stopFunction,
 	}
 
 	// Initialize a context that can be interrupted:

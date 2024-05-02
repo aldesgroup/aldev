@@ -35,6 +35,16 @@ type AldevConfig struct {
 	Deploying struct { // Section for the local deployment of the app
 		Dir string // where all the deploying config should be
 	}
+	LocalSwaps []*LocalSwapsConfig // Automatically, temporarily swapping bits of code
+}
+
+type LocalSwapsConfig struct {
+	From string   // the path from which to look for swaps; "." for the current project, "../../dependency" to swap in another lib
+	For  []string // the file paths for which to apply the same swaps; can be provided as a glob, e.g. "./src/**/*.ts?",
+	Do   []struct {
+		Replace string // the substring to look for and replace
+		With    string // the replacement
+	}
 }
 
 func ReadConfig(cfgFileName string) *AldevConfig {

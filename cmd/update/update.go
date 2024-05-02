@@ -43,7 +43,7 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	cfg := utils.ReadConfig(cmd.GetConfigFilename())
 
 	// the main cancelable context, that should stop everything
-	aldevCtx := utils.InitAldevContext()
+	aldevCtx := utils.InitAldevContext(100, nil)
 
 	// TODO add installation / lib update step
 	// TODO add -deps to include go get -u -v ./main && git commit && git push
