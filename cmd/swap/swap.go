@@ -81,7 +81,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	sets, watchedFolders = getWatchedFilesAndFolders(cfg)
 
 	// performing the initial swaps
-	doAllTheSwaps(false)
+	doAllTheSwaps(false, true)
 
 	// adding a watcher to detect some file changes, for additional needed swaps
 	watcher := utils.WatcherFor(watchedFolders...)
@@ -95,7 +95,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 		time.Sleep(10 * time.Millisecond)
 
 		// performing the swaps, in reverse
-		doAllTheSwaps(true)
+		doAllTheSwaps(true, true)
 	}()
 
 	// watching all the files here and rebooting the watching if something is changed
@@ -129,7 +129,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 						time.Sleep(200 * time.Millisecond)
 
 						// performing the swaps on the newly computed sets
-						doAllTheSwaps(false)
+						doAllTheSwaps(false, false)
 
 					}
 				}
@@ -144,7 +144,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	<-aldevCtx.Done()
 }
 
-func doAllTheSwaps(rollback bool) {
+func doAllTheSwaps(rollback bool, startOrFinish bool) {
 	// we're not allowing forward swaps if we're finished, only rollbacks
 	if isFinished() && !rollback {
 		return
@@ -155,10 +155,12 @@ func doAllTheSwaps(rollback bool) {
 		set.doSwaps(rollback)
 	}
 
-	if rollback {
-		utils.Info("Swap Mode OFF")
-	} else {
-		utils.Info("Swap Mode ON")
+	if startOrFinish {
+		if rollback {
+			utils.Info("Swap Mode OFF")
+		} else {
+			utils.Info("Swap Mode ON")
+		}
 	}
 
 	// bit of logging

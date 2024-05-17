@@ -9,7 +9,7 @@ func WatcherFor(filepaths ...string) *fsnotify.Watcher {
 
 	// watching the given files
 	for _, filepath := range filepaths {
-		Info("Watching path: %s", filepath)
+		Debug("Watching path: %s", filepath)
 		FatalIfErr(watcher.Add(filepath))
 	}
 
