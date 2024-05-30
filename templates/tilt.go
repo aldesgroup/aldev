@@ -54,46 +54,18 @@ apiHost = str(local(echo_off=True, command="kubectl get services --namespace kub
 
 # if we're developing libraries along with this project, then:
 if useLocalDeps:
-  ## continuously building GoaldR
-  #local_resource(
-  #  name         ='refresh-goaldr',
-  #  dir          ='../goaldr',
-  #  cmd          ='npx tsc && npx vite build',
-  #  deps         ='../goaldr/lib',
-  #  # serve_dir    ='../goaldr',
-  #  # serve_cmd    ='npm run dev',
-  #  # resource_deps=['{{.AppName}}-api-depl'],
-  #  )
-#
-  ## continuously building EmeraldR
-  #local_resource(
-  #  name         ='refresh-emeraldr',
-  #  dir          ='../emeraldr',
-  #  cmd          ='rm -fr node_modules/.vite && npm link goaldr && npx tsc && npx vite build',
-  #  # cmd          ='npx tsc && npx vite build',
-  #  deps         =['../emeraldr/lib/components', '../goaldr/dist'],
-  #  # serve_dir    ='../emeraldr',
-  #  # serve_cmd    ='npm run dev',
-  #  resource_deps=['refresh-goaldr'],
-  #  )
-
-  # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-  # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-  # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-  # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-  # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-  # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-  # The following should probably be directly part of the Aldev commands
+  webAppEnvVars = "WEB_API_URL=http://"+apiHost+":{{.API.Port}}"
+  {{range .Web.EnvVars}}webAppEnvVars += " {{.Name}}={{.Value}}"
+  {{end}}
 
   # locally running Vite's dev server - no need to containerize this for now
   local_resource(
       name         ='{{.AppName}}-vite-serve',
       dir          ='{{.Web.SrcDir}}',
-      cmd          ='rm -fr node_modules/.vite && npm link goaldr @aldes/emeraldr',
+      cmd          ='rm -fr node_modules/.vite && npm i',
       deps         =['{{.Web.SrcDir}}/package.json'],
-      serve_cmd    ='LOCAL_API_URL=http://'+apiHost+':{{.API.Port}} npm run dev',
+      serve_cmd    =webAppEnvVars + ' npm run dev',
       serve_dir    ='{{.Web.SrcDir}}',
-      # resource_deps=['refresh-emeraldr', '{{.AppName}}-api-depl'],
       resource_deps=['{{.AppName}}-api-depl'],
       )
 else:
@@ -107,7 +79,7 @@ else:
         fall_back_on('{{.Web.SrcDir}}/vite.config.js'),
         sync('{{.Web.SrcDir}}/', '/web/'),
         run(
-            'npm install',
+            'npm install --force',
             trigger=['{{.Web.SrcDir}}/package.json', '{{.Web.SrcDir}}/package-json.lock']
         )
     ]

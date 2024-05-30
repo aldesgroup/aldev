@@ -210,6 +210,9 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 	// last but not least, the Tiltfile
 	utils.EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
 
+	// list of env vars for the web app
+	utils.EnsureFileFromTemplate(cfg, path.Join(cfg.Web.SrcDir, ".env-list"), templates.WebEnvList)
+
 	// making sure the namespace is fresh
 	kustomization := "dev"
 	if useLocalDeps {

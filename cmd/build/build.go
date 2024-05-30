@@ -14,7 +14,7 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevBuildCmd represents the base command when called without any subcommands
+// aldevBuildCmd represents a subcommand
 var aldevBuildCmd = &cobra.Command{
 	Use:   "build",
 	Short: "Builds the app with additional generated code to speed up your dev",

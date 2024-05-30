@@ -24,13 +24,17 @@ type AldevConfig struct {
 		Build struct {
 			BinDir         string // folder where to put the compiled binary, relatively to the API directory
 			ResolvedBinDir string // the bin directory, relatively to the project's rool
-			// Library        bool   // if true, then we're "aldeveloping" a library here
 		}
 		DataDir string // where to find bootstraping data to run the app
 	}
 	Web struct {
-		SrcDir string // where the Web app's GoaldR-based code should be found
-		Port   int    // the port used to expose the app's frontend
+		SrcDir  string     // where the Web app's GoaldR-based code should be found
+		Port    int        // the port used to expose the app's frontend
+		EnvVars []struct { // environment variables to pass to the web app
+			Name  string // the variable name; must start with "WEB_"
+			Desc  string // a description for the
+			Value string // the value we're using for the local dev environment
+		}
 	}
 	Deploying struct { // Section for the local deployment of the app
 		Dir string // where all the deploying config should be
@@ -61,6 +65,7 @@ func ReadConfig(cfgFileName string) *AldevConfig {
 
 	// Some useful computation
 	cfg.API.Build.ResolvedBinDir = path.Join(cfg.API.SrcDir, cfg.API.Build.BinDir)
+	// cfg.Web.Env.ResolvedVars = "\"WEB_API_URL=http://\"+apiHost+\":42042\""
 
 	return cfg
 }

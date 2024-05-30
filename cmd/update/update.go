@@ -10,7 +10,7 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevUpdateCmd represents the base command when called without any subcommands
+// aldevUpdateCmd represents a subcommand
 var aldevUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Updates the Aldev environment's required external resources",

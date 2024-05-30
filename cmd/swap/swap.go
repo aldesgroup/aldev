@@ -20,7 +20,7 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevSwapCmd represents the base command when called without any subcommands
+// aldevSwapCmd represents a subcommand
 var aldevSwapCmd = &cobra.Command{
 	Use:   "swap",
 	Short: "targets some configured file to swap some substrings inside",
