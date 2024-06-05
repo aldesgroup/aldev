@@ -84,7 +84,9 @@ func fetchVendor(ctx CancelableContext, cfg *AldevConfig, vendor *VendorConfig) 
 	// will there be a next version different from the current one?
 	var nextVersion *versionObject
 	if vendor.Version == "latest" {
-		if currentVersion == nil || latestVersion.Commit != currentVersion.Commit {
+		if currentVersion == nil ||
+			latestVersion.Commit != currentVersion.Commit ||
+			latestVersion.Value != currentVersion.Value {
 			nextVersion = latestVersion
 		}
 	} else {
