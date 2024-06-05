@@ -16,3 +16,8 @@ func InstallGitHooks(ctx CancelableContext, cfg *AldevConfig) {
 	EnsureFileFromTemplate(cfg, file, templates.GitHookPRECOMMIT, TagHOTSWAPPED)
 	Run("Activating the pre-commit hook", ctx, false, "chmod +x %s", file)
 }
+
+type versionObject struct {
+	Commit string
+	Value  string
+}

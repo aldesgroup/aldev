@@ -36,9 +36,9 @@ docker_build_with_restart(
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
-  only       =['./{{.API.Build.ResolvedBinDir}}', './{{.API.DataDir}}'],
+  only       =['./{{.GetResolvedBinDir}}', './{{.API.DataDir}}'],
   live_update=[
-    sync('./{{.API.Build.ResolvedBinDir}}', '/api'),
+    sync('./{{.GetResolvedBinDir}}', '/api'),
     sync('./{{.API.DataDir}}', '/api'),
   ],
 )
@@ -57,7 +57,6 @@ if useLocalDeps:
   webAppEnvVars = "WEB_API_URL=http://"+apiHost+":{{.API.Port}}"
   {{range .Web.EnvVars}}webAppEnvVars += " {{.Name}}={{.Value}}"
   {{end}}
-
   # locally running Vite's dev server - no need to containerize this for now
   local_resource(
       name         ='{{.AppName}}-vite-serve',

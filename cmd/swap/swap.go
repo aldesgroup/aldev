@@ -255,7 +255,7 @@ func (thisSet *swapSet) doSwaps(rollback bool) {
 				direction = "reverse"
 			}
 			utils.Info("File %s is being %s-swapped", filename, direction)
-			utils.WriteToFile(filename, modifiedText)
+			utils.WriteStringToFile(filename, modifiedText)
 		}
 	}
 }

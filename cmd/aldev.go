@@ -95,11 +95,26 @@ func aldevRun(command *cobra.Command, args []string) {
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(2000, nil)
 
+	// --- one-time stuff
+
+	// one time thing: install the pre-commit hook
+	go utils.InstallGitHooks(aldevCtx, cfg)
+
+	// one time thing: using Aldev swap when locally developping the dependencies alongside
+	if useLocalDeps {
+		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev swap")
+	}
+
+	// --- main loop stuff
+
+	// for which file changes are we going to restart the main loop?
+	watched := []string{cfgFileName} // Aldev's config
+	if cfg.API != nil {
+		watched = append(watched, path.Join(cfg.API.SrcDir, cfg.API.Config)) // the API's config
+	}
+
 	// adding a watcher to detect some file changes
-	watcher := utils.WatcherFor( // watching for...
-		path.Join(cfg.API.SrcDir, cfg.API.Config), // the API's config
-		cfgFileName, // Aldev's config
-	)
+	watcher := utils.WatcherFor(watched...)
 	defer watcher.Close()
 
 	// loop to react to these file changes
@@ -141,17 +156,6 @@ func aldevRun(command *cobra.Command, args []string) {
 		}
 	}()
 
-	// proceed to download external resources
-	go utils.DownloadExternalResources(aldevCtx, cfg)
-
-	// install the pre-commit hook
-	go utils.InstallGitHooks(aldevCtx, cfg)
-
-	// using Aldev swap when locally developping the dependencies alongside
-	if useLocalDeps {
-		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev swap")
-	}
-
 	// building & deploying the app
 	go func() {
 		asyncBuildAndDeploy(aldevCtx.GetLoopCtx())
@@ -163,6 +167,8 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// not quitting while the context is still going
 	<-aldevCtx.Done()
+
+	time.Sleep(10 * time.Millisecond)
 }
 
 // ----------------------------------------------------------------------------
@@ -177,77 +183,91 @@ func asyncBuildAndDeploy(ctx utils.CancelableContext) {
 	// reading the Aldev config again, in case it has changed
 	cfg := utils.ReadConfig(cfgFileName)
 
-	// making sure the config map is here and up-to-date
-	utils.EnsureConfigmap(cfg)
+	// proceed to download external resources
+	utils.DownloadExternalResources(ctx, cfg)
 
-	// making sure some needed files are here: base local deployment
-	baseDir := utils.EnsureDir(cfg.Deploying.Dir, "base")
-	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
-	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-.yaml"), templates.API)
-	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-lb.yaml"), templates.LB)
-	utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-web.yaml"), templates.Web)
-
-	// docker files
-	dockerDir := utils.EnsureDir(cfg.Deploying.Dir, "docker")
-	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-api-docker"), templates.DockerLocalAPI)
-	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-web-docker"), templates.DockerLocalWEB)
-	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
-	utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
-
-	// adding overlays
-	overlaysDir := utils.EnsureDir(cfg.Deploying.Dir, "overlays")
-	addOverlay(cfg, overlaysDir, "dev", nil)
-	addOverlay(cfg, overlaysDir, "local", [][]string{
-		{"patch-no-web-container.yaml", templates.NoWebContainerPatch},
-	})
-	addOverlay(cfg, overlaysDir, "sandbox", nil)
-	addOverlay(cfg, overlaysDir, "staging", nil)
-	addOverlay(cfg, overlaysDir, "production", nil)
-
-	// deployment with Gitlab
-	utils.EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
-
-	// last but not least, the Tiltfile
-	utils.EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
-
-	// list of env vars for the web app
-	utils.EnsureFileFromTemplate(cfg, path.Join(cfg.Web.SrcDir, ".env-list"), templates.WebEnvList)
-
-	// making sure the namespace is fresh
-	kustomization := "dev"
-	if useLocalDeps {
-		kustomization = "local"
-	}
-	if string(utils.RunAndGet("We want to check what's in our namespace",
-		"kubectl get all --namespace %s-%s", cfg.AppName, kustomization)) != "" {
-		utils.Run("The namespace needs some cleanup first", ctx, false, "tilt down%s", tiltOptions)
-	}
-
-	if !onlyGenerate {
-		// computing the custom options
-		if useLocalDeps {
-			tiltOptions = " --use-local"
-		}
-		if tiltOptions != "" {
-			tiltOptions = " --" + tiltOptions
-		}
-
-		// making sure we clean up at the end
-		defer func() {
-			time.Sleep(100 * time.Millisecond)
-			utils.Run("We'll clean up the context now", ctx, false, "tilt down%s", tiltOptions)
-		}()
-
-		// Running a command that never finish with the cancelable context
-		mode := ""
-		if verbose {
-			mode = " --verbose --debug"
-		}
-		utils.Run("Now we start Tilt to handle all the k8s deployments",
-			ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
+	// in library mode, there no need for k8s, deployments, env vars, etc.
+	if cfg.IsLibrary() {
+		utils.QuickRun("Installing / refreshing the dev environment", cfg.Lib.Install)
+		utils.Run("Developing the lib", ctx, true, cfg.Lib.Develop)
 
 		// Wait for the context to be canceled or the program to exit
 		<-ctx.Done()
+
+	} else {
+
+		// making sure the config map is here and up-to-date
+		utils.EnsureConfigmap(cfg)
+
+		// making sure some needed files are here: base local deployment
+		baseDir := utils.EnsureDir(cfg.Deploying.Dir, "base")
+		utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
+		utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-.yaml"), templates.API)
+		utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-lb.yaml"), templates.LB)
+		utils.EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-web.yaml"), templates.Web)
+
+		// docker files
+		dockerDir := utils.EnsureDir(cfg.Deploying.Dir, "docker")
+		utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-api-docker"), templates.DockerLocalAPI)
+		utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-web-docker"), templates.DockerLocalWEB)
+		utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
+		utils.EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
+
+		// adding overlays
+		overlaysDir := utils.EnsureDir(cfg.Deploying.Dir, "overlays")
+		addOverlay(cfg, overlaysDir, "dev", nil)
+		addOverlay(cfg, overlaysDir, "local", [][]string{
+			{"patch-no-web-container.yaml", templates.NoWebContainerPatch},
+		})
+		addOverlay(cfg, overlaysDir, "sandbox", nil)
+		addOverlay(cfg, overlaysDir, "staging", nil)
+		addOverlay(cfg, overlaysDir, "production", nil)
+
+		// deployment with Gitlab
+		utils.EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
+
+		// last but not least, the Tiltfile
+		utils.EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
+
+		// list of env vars for the web app
+		utils.EnsureFileFromTemplate(cfg, path.Join(cfg.Web.SrcDir, ".env-list"), templates.WebEnvList)
+
+		// making sure the namespace is fresh
+		kustomization := "dev"
+		if useLocalDeps {
+			kustomization = "local"
+		}
+		if string(utils.RunAndGet("We want to check what's in our namespace", ".", false,
+			"kubectl get all --namespace %s-%s", cfg.AppName, kustomization)) != "" {
+			utils.Run("The namespace needs some cleanup first", ctx, false, "tilt down%s", tiltOptions)
+		}
+
+		if !onlyGenerate {
+			// computing the custom options
+			if useLocalDeps {
+				tiltOptions = " --use-local"
+			}
+			if tiltOptions != "" {
+				tiltOptions = " --" + tiltOptions
+			}
+
+			// making sure we clean up at the end
+			defer func() {
+				time.Sleep(100 * time.Millisecond)
+				utils.Run("We'll clean up the context now", ctx, false, "tilt down%s", tiltOptions)
+			}()
+
+			// Running a command that never finishes, with the cancelable context
+			mode := ""
+			if verbose {
+				mode = " --verbose --debug"
+			}
+			utils.Run("Now we start Tilt to handle all the k8s & docker deployments",
+				ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
+
+			// Wait for the context to be canceled or the program to exit
+			<-ctx.Done()
+		}
 	}
 }
 

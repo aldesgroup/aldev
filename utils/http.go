@@ -11,6 +11,8 @@ import (
 
 // getting JSON from an open URL
 func getJSON(url string) []byte {
+	Debug("Requesting URL: %s", url)
+
 	// Send HTTP GET request
 	response, errGet := http.Get(url)
 	FatalIfErr(errGet)

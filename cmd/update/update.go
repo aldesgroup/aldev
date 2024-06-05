@@ -22,8 +22,9 @@ var aldevUpdateCmd = &cobra.Command{
 }
 
 var (
-// cfgFileName  string
-// verbose      bool
+	// cfgFileName  string
+	verbose bool
+
 // useLocalDeps bool
 // options      string
 )
@@ -31,6 +32,7 @@ var (
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevUpdateCmd)
+	aldevUpdateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -39,6 +41,11 @@ func init() {
 // ----------------------------------------------------------------------------
 
 func aldevUpdateRun(command *cobra.Command, args []string) {
+	// it's only here that we have this variable valued
+	if verbose {
+		utils.SetVerbose()
+	}
+
 	// reading the Aldev config one first time
 	cfg := utils.ReadConfig(cmd.GetConfigFilename())
 
@@ -48,6 +55,6 @@ func aldevUpdateRun(command *cobra.Command, args []string) {
 	// TODO add installation / lib update step
 	// TODO add -deps to include go get -u -v ./main && git commit && git push
 
-	// proceed to download external resources
+	// downloading various external resource in parallel
 	utils.DownloadExternalResources(aldevCtx, cfg)
 }

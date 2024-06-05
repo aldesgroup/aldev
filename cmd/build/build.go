@@ -60,8 +60,8 @@ func aldevBuildRun(command *cobra.Command, args []string) {
 	utils.Run("Making sure we're using the right set of dependencies", buildCtx, false, "go mod tidy")
 
 	// control
-	if cfg.API.Build.BinDir == "" {
-		utils.Fatal("Aldev config item `.api.build.bindir` (relative path for the bin folder from the API directory) is empty!")
+	if cfg.API.BinDir == "" {
+		utils.Fatal("Aldev config item `.api.bindir` (relative path for the temp folder) is empty!")
 	}
 
 	// // some args for the code generation part
@@ -71,9 +71,9 @@ func aldevBuildRun(command *cobra.Command, args []string) {
 	// }
 
 	// repeated commands
-	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.Build.BinDir, cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", //+libraryArg,
-		cfg.API.Build.ResolvedBinDir, cfg.AppName, path.Join(cfg.API.SrcDir, cfg.API.Config), cfg.API.SrcDir)
+	mainBuildCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.API.BinDir, cfg.AppName)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", cfg.GetResolvedBinDir(), cfg.AppName,
+		path.Join(cfg.API.SrcDir, cfg.API.Config), cfg.API.SrcDir)
 
 	// compilation n°1 - this is needed to have the run command up-to-date
 	utils.Run("Only compiling & formatting the code", buildCtx, false, mainBuildCmd)

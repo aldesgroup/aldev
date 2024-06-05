@@ -25,10 +25,11 @@ func QuickRun(whyRunThis string, commandAsString string, params ...any) {
 	Run(whyRunThis, newBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
 }
 
-func RunAndGet(whyRunThis string, commandAsString string, params ...any) []byte {
+func RunAndGet(whyRunThis string, execDir string, logStart bool, commandAsString string, params ...any) []byte {
 	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
 	buffer := new(bytes.Buffer)
-	runCmd(whyRunThis, newBaseContext().WithStdOutWriter(buffer), false, exec.Command(commandElements[0], commandElements[1:]...))
+	runCmd(whyRunThis, newBaseContext().WithStdOutWriter(buffer).WithExecDir(execDir),
+		logStart, exec.Command(commandElements[0], commandElements[1:]...))
 	return buffer.Bytes()
 }
 
@@ -75,7 +76,7 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 		if logStart && ok && exitErr.ExitCode() == -1 {
 			Info("Command canceled due to context cancellation")
 		} else {
-			// let's re-run to have more info, if needed
+			// let's re-run to have more info, if not printed on stderr at first
 			if ctx.getStdErrWriter() != os.Stderr {
 				Error("Command [%s] failed: %v", cmd.String(), errRun.Error())
 				Run("Re-running the command to get the error logs",
