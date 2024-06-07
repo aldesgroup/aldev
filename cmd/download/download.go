@@ -10,15 +10,13 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevUpdateCmd represents a subcommand
-var aldevUpdateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Updates the Aldev environment's required external resources",
+// aldevDownloadCmd represents a subcommand
+var aldevDownloadCmd = &cobra.Command{
+	Use:   "download",
+	Short: "Downloads the Aldev environment's required external resources",
 	Long: "This downloads the required external resources in their latest version, " +
-		"like the i18n file with up-to-date translations. Later, this subcommand " +
-		"will also help set up and maintain the whole dev environment, " +
-		"by installing / updating all the locally needed software.",
-	Run: aldevUpdateRun,
+		"like the i18n file with up-to-date translations, or some required dependencies.",
+	Run: aldevDownloadRun,
 }
 
 var (
@@ -31,8 +29,8 @@ var (
 
 func init() {
 	// linking to the root command
-	cmd.GetAldevCmd().AddCommand(aldevUpdateCmd)
-	aldevUpdateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
+	cmd.GetAldevCmd().AddCommand(aldevDownloadCmd)
+	aldevDownloadCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -40,7 +38,7 @@ func init() {
 // deploying function
 // ----------------------------------------------------------------------------
 
-func aldevUpdateRun(command *cobra.Command, args []string) {
+func aldevDownloadRun(command *cobra.Command, args []string) {
 	// it's only here that we have this variable valued
 	if verbose {
 		utils.SetVerbose()
