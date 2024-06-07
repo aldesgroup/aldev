@@ -22,7 +22,7 @@ else:
 # building the API's code
 local_resource(
     name  ='{{.AppName}}-api-compile',
-    cmd   ='aldev build',
+    cmd   ='aldev complete',
     # taking into account the dependencies
     deps  =['{{.API.SrcDir}}', '../goald'],
     # the API config is also ignored here, because Aldev is already watching it

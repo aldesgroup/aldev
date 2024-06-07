@@ -1,4 +1,4 @@
-package update
+package generate
 
 import (
 	"github.com/aldesgroup/aldev/cmd"
@@ -10,13 +10,13 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevDownloadCmd represents a subcommand
-var aldevDownloadCmd = &cobra.Command{
-	Use:   "download",
+// aldevGenerateCmd represents a subcommand
+var aldevGenerateCmd = &cobra.Command{
+	Use:   "generate",
 	Short: "Downloads the Aldev environment's required external resources",
 	Long: "This downloads the required external resources in their latest version, " +
 		"like the i18n file with up-to-date translations, or some required dependencies.",
-	Run: aldevDownloadRun,
+	Run: aldevGenerateRun,
 }
 
 var (
@@ -29,15 +29,15 @@ var (
 
 func init() {
 	// linking to the root command
-	cmd.GetAldevCmd().AddCommand(aldevDownloadCmd)
-	aldevDownloadCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
+	cmd.GetAldevCmd().AddCommand(aldevGenerateCmd)
+	aldevGenerateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
 // Main logic
 // ----------------------------------------------------------------------------
 
-func aldevDownloadRun(command *cobra.Command, args []string) {
+func aldevGenerateRun(command *cobra.Command, args []string) {
 	// it's only here that we have this variable valued
 	if verbose {
 		utils.SetVerbose()
@@ -46,12 +46,6 @@ func aldevDownloadRun(command *cobra.Command, args []string) {
 	// reading the Aldev config one first time
 	cfg := utils.ReadConfig(cmd.GetConfigFilename())
 
-	// the main cancelable context, that should stop everything
-	aldevCtx := utils.InitAldevContext(100, nil)
-
-	// TODO add installation / lib update step -> maybe more in a `aldev install` subcommand
-	// TODO add -deps to include go get -u -v ./main && git commit && git push
-
 	// downloading various external resource in parallel
-	utils.DownloadExternalResources(aldevCtx, cfg)
+	utils.GenerateConfigs(cfg)
 }
