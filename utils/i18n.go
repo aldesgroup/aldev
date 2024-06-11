@@ -85,8 +85,9 @@ func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
 	FatalIfErr(errJson)
 
 	// writing out to a file
-	WriteBytesToFile(path.Join(cfg.API.DataDir, cfg.API.I18n.File), jsonOutput)
-	Info("Done downloading the translation in %s", time.Since(start))
+	filename := path.Join(cfg.API.DataDir, cfg.API.I18n.File)
+	WriteBytesToFile(filename, jsonOutput)
+	Info("Done downloading the translations into '%s' in %s", filename, time.Since(start))
 }
 
 // shortcut to trim the spaces

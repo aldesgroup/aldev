@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 )
 
 func EnsureDir(pathElem ...string) string {
@@ -48,15 +49,30 @@ func WriteJsonObjToFile(filename string, obj any) {
 	WriteBytesToFile(filename, jsonBytes)
 }
 
-func ReadFileToJson[T any, Y *T](filename string, obj Y, failIfNotExist bool) Y {
+func ReadFile(filename string, failIfNotExist bool) []byte {
 	if _, fileExists := FileExists(filename); !fileExists {
 		if failIfNotExist {
 			Fatal("File '%s' cannot be found!", filename)
 		}
 		return nil
 	}
+
 	fileBytes, errRead := os.ReadFile(filename)
 	FatalIfErr(errRead)
-	FatalIfErr(json.Unmarshal(fileBytes, obj))
-	return obj
+	return fileBytes
+}
+
+func ReadFileToJson[T any, Y *T](filename string, obj Y, failIfNotExist bool) Y {
+	if fileBytes := ReadFile(filename, failIfNotExist); fileBytes != nil {
+		FatalIfErr(json.Unmarshal(fileBytes, obj))
+	}
+	return nil
+}
+
+func ReplaceInFile(filename string, replacements map[string]string) {
+	fileContent := string(ReadFile(filename, true))
+	for replace, by := range replacements {
+		fileContent = strings.ReplaceAll(fileContent, replace, by)
+	}
+	WriteStringToFile(filename, fileContent)
 }

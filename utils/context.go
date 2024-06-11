@@ -9,13 +9,14 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 )
 
 type CancelableContext interface {
 	context.Context
-	WithExecDir(string) CancelableContext
+	WithExecDir(...string) CancelableContext
 	getExecDir() string
 	WithStdOutWriter(io.Writer) CancelableContext
 	getStdOutWriter() io.Writer
@@ -36,7 +37,7 @@ type baseCancelableContext struct {
 	errLogFn      logFn
 }
 
-func newBaseContext() *baseCancelableContext {
+func NewBaseContext() *baseCancelableContext {
 	return &baseCancelableContext{
 		Context: context.WithoutCancel(context.Background()),
 	}
@@ -47,8 +48,8 @@ func newBaseCancelableContext() *baseCancelableContext {
 	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil}
 }
 
-func (thisCtx *baseCancelableContext) WithExecDir(dir string) CancelableContext {
-	thisCtx.execDir = dir
+func (thisCtx *baseCancelableContext) WithExecDir(dirElems ...string) CancelableContext {
+	thisCtx.execDir = path.Join(dirElems...)
 	return thisCtx
 }
 

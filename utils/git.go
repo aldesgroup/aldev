@@ -12,9 +12,11 @@ const (
 
 // Installing Git hooks to unify our practices
 func InstallGitHooks(ctx CancelableContext, cfg *AldevConfig) {
-	file := ".git/hooks/pre-commit"
-	EnsureFileFromTemplate(cfg, file, templates.GitHookPRECOMMIT, TagHOTSWAPPED)
-	Run("Activating the pre-commit hook", ctx, false, "chmod +x %s", file)
+	if _, exists := DirExists(".git"); exists {
+		file := ".git/hooks/pre-commit"
+		EnsureFileFromTemplate(cfg, file, templates.GitHookPRECOMMIT, TagHOTSWAPPED)
+		Run("Activating the pre-commit hook", ctx, false, "chmod +x %s", file)
+	}
 }
 
 type versionObject struct {

@@ -11,9 +11,8 @@ import (
 )
 
 type AldevConfig struct {
-	AppName  string    // the name of the app - beware: the key has to be "appname" in the YAML file
-	CacheDir string    // a temp folder for caching stuff, like the git clones of the vendors, etc.
-	Lib      *struct { // if this section's non-empty, then this project is not an app but a library, and section "API", "Web", "Deploying" are discarded
+	AppName string    // the name of the app - beware: the key has to be "appname" in the YAML file
+	Lib     *struct { // if this section's non-empty, then this project is not an app but a library, and section "API", "Web", "Deploying" are discarded
 		SrcDir  string // where the library source code can be found
 		Install string // command that should be run to install stuff, like needed dependencies, etc.
 		Develop string // command that should be run to allow for continuously developping & building the library

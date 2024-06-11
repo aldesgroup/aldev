@@ -3,17 +3,22 @@
 // ----------------------------------------------------------------------------
 package utils
 
-import "sync"
+import (
+	"os"
+	"sync"
+)
+
+const AldevCacheDirENVVAR = "ALDEV_CACHEDIR"
 
 // Downloading external resources, like translations, vendors, etc
 func DownloadExternalResources(ctx CancelableContext, cfg *AldevConfig) {
 	// making sure the cache folder exists if we need it
 	if len(cfg.Vendors) > 0 {
-		if cfg.CacheDir == "" {
-			Fatal("The cache directory cannot be empty; should be by default: ../tmp")
+		if os.Getenv(AldevCacheDirENVVAR) == "" {
+			Fatal("The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)", AldevCacheDirENVVAR)
 		}
 
-		EnsureDir(cfg.CacheDir)
+		EnsureDir(os.Getenv(AldevCacheDirENVVAR))
 	}
 
 	// syncing

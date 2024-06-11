@@ -25,13 +25,19 @@ func fetchVendoredLibraries(ctx CancelableContext, cfg *AldevConfig) {
 	// LFG
 	start := time.Now()
 
+	// checking the environment
+	cacheDir := os.Getenv(AldevCacheDirENVVAR)
+	if cacheDir == "" {
+		Fatal("The cache directory cannot be empty; Env var 'ALDEV_CACHEDIR' should be set (to '../tmp' for instance)")
+	}
+
 	// fetching / refreshing all the vendors in parallel
 	wg := new(sync.WaitGroup)
 	for _, vendor := range cfg.Vendors {
 		wg.Add(1)
 		go func(v *VendorConfig) {
 			defer wg.Done()
-			fetchVendor(ctx, cfg, v)
+			fetchVendor(ctx, v, cacheDir)
 		}(vendor)
 	}
 	wg.Wait()
@@ -40,7 +46,7 @@ func fetchVendoredLibraries(ctx CancelableContext, cfg *AldevConfig) {
 	Info("Done fetching / refreshing the vendors in %s", time.Since(start))
 }
 
-func fetchVendor(ctx CancelableContext, cfg *AldevConfig, vendor *VendorConfig) {
+func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 	// making sure we recover any big crashing error
 	defer Recover(ctx, "fetching / refreshing vendor '%s'", vendor)
 
@@ -48,24 +54,24 @@ func fetchVendor(ctx CancelableContext, cfg *AldevConfig, vendor *VendorConfig) 
 	repoName := path.Base(vendor.Repo)
 
 	// checking if vendor already exists or not
-	repoPath, repoExistsInCache := DirExists(cfg.CacheDir, repoName)
+	repoPath, repoExistsInCache := DirExists(cacheDir, repoName)
 
 	// if it exists, git pulling within it
 	if repoExistsInCache {
 		Run("Ensuring the main branch in the '"+repoName+"' repo",
-			newBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoPath).WithStdOutWriter(io.Discard),
+			NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoPath).WithStdOutWriter(io.Discard),
 			false,
 			"git checkout main")
 
 		Run("refreshing the cached '"+repoName+"' repo",
-			newBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoPath).WithStdOutWriter(io.Discard),
+			NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoPath).WithStdOutWriter(io.Discard),
 			false,
 			"git pull")
 
 	} else { // if not, git clone it into temp folder
 		firstSlashIndex := strings.Index(vendor.Repo, "/")
 		Run("git-cloning / caching the '"+repoName+"' repo",
-			newBaseContext().WithStdErrWriter(io.Discard).WithExecDir(cfg.CacheDir),
+			NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(cacheDir),
 			false,
 			"git clone git@%s:%s.git", vendor.Repo[:firstSlashIndex], vendor.Repo[firstSlashIndex+1:])
 	}
@@ -104,7 +110,7 @@ func fetchVendor(ctx CancelableContext, cfg *AldevConfig, vendor *VendorConfig) 
 
 			// checking out the required version
 			Run("checking out the right '"+repoName+"' version",
-				newBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoPath),
+				NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoPath),
 				false,
 				"git checkout %s", vendor.Version)
 

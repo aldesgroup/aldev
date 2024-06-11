@@ -22,13 +22,13 @@ func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsStrin
 }
 
 func QuickRun(whyRunThis string, commandAsString string, params ...any) {
-	Run(whyRunThis, newBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
+	Run(whyRunThis, NewBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
 }
 
 func RunAndGet(whyRunThis string, execDir string, logStart bool, commandAsString string, params ...any) []byte {
 	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
 	buffer := new(bytes.Buffer)
-	runCmd(whyRunThis, newBaseContext().WithStdOutWriter(buffer).WithExecDir(execDir),
+	runCmd(whyRunThis, NewBaseContext().WithStdOutWriter(buffer).WithExecDir(execDir),
 		logStart, exec.Command(commandElements[0], commandElements[1:]...))
 	return buffer.Bytes()
 }
@@ -37,7 +37,7 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 	// making sure we have a non-nil context here
 	ctx := ctxArg
 	if ctx == nil {
-		ctx = newBaseContext()
+		ctx = NewBaseContext()
 	}
 
 	// making sure we're showing everything the command will throw
@@ -80,7 +80,7 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 			if ctx.getStdErrWriter() != os.Stderr {
 				Error("Command [%s] failed: %v", cmd.String(), errRun.Error())
 				Run("Re-running the command to get the error logs",
-					newBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, cmd.String())
+					NewBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, cmd.String())
 			} else {
 				ctx.getErrLogFn()("Command [%s] failed: %v", cmd.String(), errRun.Error())
 			}
