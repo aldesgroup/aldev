@@ -71,6 +71,7 @@ func aldevInitRun(command *cobra.Command, args []string) {
 		utils.Fatal("The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)",
 			utils.AldevCacheDirENVVAR)
 	}
+	utils.EnsureDir(cacheDir)
 
 	initURL := os.Getenv(aldevINITxREPO)
 	if initURL == "" {
