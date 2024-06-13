@@ -54,12 +54,12 @@ func aldevInitRun(command *cobra.Command, args []string) {
 
 	// checking the name
 	if projectName == "" || strings.Contains(projectName, " ") || strings.Contains(projectName, "_") {
-		utils.Fatal("Project name ('%s') must not be empty, or contain any space or _ characters", projectName)
+		utils.Fatal(nil, "Project name ('%s') must not be empty, or contain any space or _ characters", projectName)
 	}
 
 	// checking the context
 	if _, exists := utils.DirExists(".git"); exists {
-		utils.Fatal("Cannot run this from an actual Git project")
+		utils.Fatal(nil, "Cannot run this from an actual Git project")
 	}
 
 	// LFG
@@ -68,14 +68,14 @@ func aldevInitRun(command *cobra.Command, args []string) {
 	// checking the environment
 	cacheDir := os.Getenv(utils.AldevCacheDirENVVAR)
 	if cacheDir == "" {
-		utils.Fatal("The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)",
+		utils.Fatal(nil, "The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)",
 			utils.AldevCacheDirENVVAR)
 	}
-	utils.EnsureDir(cacheDir)
+	utils.EnsureDir(nil, cacheDir)
 
 	initURL := os.Getenv(aldevINITxREPO)
 	if initURL == "" {
-		utils.Fatal("The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)", aldevINITxREPO)
+		utils.Fatal(nil, "The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)", aldevINITxREPO)
 	}
 
 	// a context for executing stuff
@@ -93,12 +93,12 @@ func aldevInitRun(command *cobra.Command, args []string) {
 	utils.Run("removing the .gitignore file", cachedProjCtx, false, "rm -f .gitignore")
 
 	// some replacements to customize the project
-	utils.ReplaceInFile(path.Join(projDir, ".aldev.yaml"), map[string]string{"fullstack-app-template": projectName})
-	utils.ReplaceInFile(path.Join(projDir, "README.md"), map[string]string{"# fullstack-app-template": "# " + projectName})
-	utils.ReplaceInFile(path.Join(projDir, "api", "go.mod"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
-	utils.ReplaceInFile(path.Join(projDir, "api", "main", "1-start.go"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
-	utils.ReplaceInFile(path.Join(projDir, "webapp", "vite.config.ts"), map[string]string{"fullstack-app-template": projectName})
-	utils.ReplaceInFile(path.Join(projDir, "webapp", "src", "routes", "+__root.tsx"), map[string]string{"fullstack-app-template": projectName})
+	utils.ReplaceInFile(nil, path.Join(projDir, ".aldev.yaml"), map[string]string{"fullstack-app-template": projectName})
+	utils.ReplaceInFile(nil, path.Join(projDir, "README.md"), map[string]string{"# fullstack-app-template": "# " + projectName})
+	utils.ReplaceInFile(nil, path.Join(projDir, "api", "go.mod"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
+	utils.ReplaceInFile(nil, path.Join(projDir, "api", "main", "1-start.go"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
+	utils.ReplaceInFile(nil, path.Join(projDir, "webapp", "vite.config.ts"), map[string]string{"fullstack-app-template": projectName})
+	utils.ReplaceInFile(nil, path.Join(projDir, "webapp", "src", "routes", "+__root.tsx"), map[string]string{"fullstack-app-template": projectName})
 
 	// moving it
 	utils.Run("moving the project", utils.NewBaseContext().WithStdErrWriter(io.Discard), false,

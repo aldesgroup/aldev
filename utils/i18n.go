@@ -82,11 +82,11 @@ func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
 
 	// jsonification
 	jsonOutput, errJson := json.MarshalIndent(output, "", "  ")
-	FatalIfErr(errJson)
+	FatalIfErr(ctx, errJson)
 
 	// writing out to a file
 	filename := path.Join(cfg.API.DataDir, cfg.API.I18n.File)
-	WriteBytesToFile(filename, jsonOutput)
+	WriteBytesToFile(ctx, filename, jsonOutput)
 	Info("Done downloading the translations into '%s' in %s", filename, time.Since(start))
 }
 

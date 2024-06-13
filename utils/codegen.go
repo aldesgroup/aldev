@@ -17,21 +17,21 @@ func GenerateConfigs(cfg *AldevConfig) {
 	EnsureConfigmap(cfg)
 
 	// making sure some needed files are here: base local deployment
-	baseDir := EnsureDir(cfg.Deploying.Dir, "base")
+	baseDir := EnsureDir(nil, cfg.Deploying.Dir, "base")
 	EnsureFileFromTemplate(cfg, path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
 	EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-.yaml"), templates.API)
 	EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-lb.yaml"), templates.LB)
 	EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-web.yaml"), templates.Web)
 
 	// docker files
-	dockerDir := EnsureDir(cfg.Deploying.Dir, "docker")
+	dockerDir := EnsureDir(nil, cfg.Deploying.Dir, "docker")
 	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-api-docker"), templates.DockerLocalAPI)
 	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-web-docker"), templates.DockerLocalWEB)
 	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
 	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
 
 	// adding overlays
-	overlaysDir := EnsureDir(cfg.Deploying.Dir, "overlays")
+	overlaysDir := EnsureDir(nil, cfg.Deploying.Dir, "overlays")
 	addOverlay(cfg, overlaysDir, "dev", nil)
 	addOverlay(cfg, overlaysDir, "local", [][]string{
 		{"patch-no-web-container.yaml", templates.NoWebContainerPatch},
@@ -57,7 +57,7 @@ func GenerateConfigs(cfg *AldevConfig) {
 // adding an overlay with its name; each patch should be at least: [0]: the filename, [1]: the template;
 // [2], [3], etc, are string format parameters to fill the "%s" placeholders in the template.
 func addOverlay(cfg *AldevConfig, overlaysDir, overlayName string, patches [][]string) {
-	overlay := EnsureDir(overlaysDir, overlayName)
+	overlay := EnsureDir(nil, overlaysDir, overlayName)
 
 	// handling the patches at first
 	kustomizationPatches := ""
@@ -66,7 +66,7 @@ func addOverlay(cfg *AldevConfig, overlaysDir, overlayName string, patches [][]s
 		for _, patch := range patches {
 			// adding the patch to the kustomization file
 			if len(patch) < 2 {
-				Fatal("Patches should be provided as at least 1 filename, and 1 template")
+				Fatal(nil, "Patches should be provided as at least 1 filename, and 1 template")
 			}
 			filename := patch[0]
 			template := patch[1]

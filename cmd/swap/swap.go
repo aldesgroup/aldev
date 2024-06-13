@@ -78,10 +78,10 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	aldevCtx := utils.InitAldevContext(10, setFinished)
 
 	// which files are going to be impacted?
-	sets, watchedFolders = getWatchedFilesAndFolders(cfg)
+	sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx, cfg)
 
 	// performing the initial swaps
-	doAllTheSwaps(false, true)
+	doAllTheSwaps(aldevCtx, false, true)
 
 	// adding a watcher to detect some file changes, for additional needed swaps
 	watcher := utils.WatcherFor(watchedFolders...)
@@ -89,13 +89,13 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	// making sure we'll roll the changes back at the end
 	defer func() {
 		// let's stop the watching right away
-		utils.FatalIfErr(watcher.Close())
+		utils.FatalIfErr(aldevCtx, watcher.Close())
 
 		// TODO like in Aldev, wait for this to be done instead of sleeping
 		time.Sleep(10 * time.Millisecond)
 
 		// performing the swaps, in reverse
-		doAllTheSwaps(true, true)
+		doAllTheSwaps(aldevCtx, true, true)
 	}()
 
 	// watching all the files here and rebooting the watching if something is changed
@@ -119,23 +119,23 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 						cache.SetDefault(event.String(), true)
 
 						// which files are going to be impacted NOW?
-						sets, watchedFolders = getWatchedFilesAndFolders(cfg)
+						sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx, cfg)
 
 						// adding a watcher to detect some file changes
-						utils.FatalIfErr(watcher.Close()) // closing the old one
+						utils.FatalIfErr(aldevCtx, watcher.Close()) // closing the old one
 						watcher = utils.WatcherFor(watchedFolders...)
 
 						// let's wait a bit here than the FS has finished doing it's stuff
 						time.Sleep(200 * time.Millisecond)
 
 						// performing the swaps on the newly computed sets
-						doAllTheSwaps(false, false)
+						doAllTheSwaps(aldevCtx, false, false)
 
 					}
 				}
 
 			case errWatcher := <-watcher.Errors:
-				utils.FatalIfErr(errWatcher)
+				utils.FatalIfErr(aldevCtx, errWatcher)
 			}
 		}
 	}()
@@ -144,7 +144,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	<-aldevCtx.Done()
 }
 
-func doAllTheSwaps(rollback bool, startOrFinish bool) {
+func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish bool) {
 	// we're not allowing forward swaps if we're finished, only rollbacks
 	if isFinished() && !rollback {
 		return
@@ -152,7 +152,7 @@ func doAllTheSwaps(rollback bool, startOrFinish bool) {
 
 	start := time.Now()
 	for _, set := range sets {
-		set.doSwaps(rollback)
+		set.doSwaps(ctx, rollback)
 	}
 
 	if startOrFinish {
@@ -177,12 +177,12 @@ type swapSet struct {
 }
 
 // builds all the sets for all the swap configs configured
-func getWatchedFilesAndFolders(cfg *utils.AldevConfig) (sets []*swapSet, watchedFolders []string) {
+func getWatchedFilesAndFolders(ctx utils.CancelableContext, cfg *utils.AldevConfig) (sets []*swapSet, watchedFolders []string) {
 	folders = map[string]bool{}
 	done = map[string]bool{}
 
 	for _, swapConf := range cfg.LocalSwaps {
-		sets = append(sets, (&swapSet{swapConf: swapConf}).buildFrom(swapConf.From))
+		sets = append(sets, (&swapSet{swapConf: swapConf}).buildFrom(ctx, swapConf.From))
 	}
 
 	for folder := range folders {
@@ -195,16 +195,16 @@ func getWatchedFilesAndFolders(cfg *utils.AldevConfig) (sets []*swapSet, watched
 }
 
 // gathering all the files corresponding to the same swap config
-func (thisSet *swapSet) buildFrom(dir string) *swapSet {
+func (thisSet *swapSet) buildFrom(ctx utils.CancelableContext, dir string) *swapSet {
 	entries, errDir := os.ReadDir(dir)
-	utils.FatalIfErr(errDir)
+	utils.FatalIfErr(ctx, errDir)
 
 	for _, entry := range entries {
 		filename := path.Join(dir, entry.Name())
 		if entry.IsDir() {
 			if entry.Name() != "node_modules" && entry.Name() != ".git" && entry.Name() != "dist" {
 				initialNbFolders := len(folders)
-				thisSet.buildFrom(filename)
+				thisSet.buildFrom(ctx, filename)
 				if len(folders) > initialNbFolders {
 					folders[dir] = true
 				}
@@ -227,13 +227,13 @@ func (thisSet *swapSet) buildFrom(dir string) *swapSet {
 const comment = " /* " + utils.TagHOTSWAPPED + " do not commit! */"
 
 // writing all the swaps for the files of the given set
-func (thisSet *swapSet) doSwaps(rollback bool) {
+func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
 	// performing the swaps for all the files of this set
 	for _, filename := range thisSet.files {
 		utils.Debug("Checking for swaps to do in file: %s", filename)
 		// reading the current file
 		contentBytes, errRead := os.ReadFile(filename)
-		utils.FatalIfErr(errRead)
+		utils.FatalIfErr(ctx, errRead)
 		contentString := string(contentBytes)
 
 		// the text obtained at the end
@@ -255,7 +255,7 @@ func (thisSet *swapSet) doSwaps(rollback bool) {
 				direction = "reverse"
 			}
 			utils.Info("File %s is being %s-swapped", filename, direction)
-			utils.WriteStringToFile(filename, modifiedText)
+			utils.WriteStringToFile(ctx, filename, modifiedText)
 		}
 	}
 }

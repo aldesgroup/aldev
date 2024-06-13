@@ -144,7 +144,7 @@ func aldevRun(command *cobra.Command, args []string) {
 				}
 
 			case errWatcher := <-watcher.Errors:
-				utils.FatalIfErr(errWatcher)
+				utils.FatalIfErr(aldevCtx, errWatcher)
 			}
 		}
 	}()

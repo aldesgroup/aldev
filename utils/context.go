@@ -22,8 +22,8 @@ type CancelableContext interface {
 	getStdOutWriter() io.Writer
 	WithStdErrWriter(io.Writer) CancelableContext
 	getStdErrWriter() io.Writer
-	WithErrLogFn(logFn) CancelableContext
-	getErrLogFn() logFn
+	WithErrLogFn(errLogFn) CancelableContext
+	getErrLogFn() errLogFn
 	CancelAll()
 }
 
@@ -34,7 +34,7 @@ type baseCancelableContext struct {
 	shortCommands bool
 	stdoutWriter  io.Writer
 	stderrWriter  io.Writer
-	errLogFn      logFn
+	errLogFn      errLogFn
 }
 
 func NewBaseContext() *baseCancelableContext {
@@ -75,12 +75,12 @@ func (thisCtx *baseCancelableContext) getStdErrWriter() io.Writer {
 	return thisCtx.stderrWriter
 }
 
-func (thisCtx *baseCancelableContext) WithErrLogFn(errLogFn logFn) CancelableContext {
+func (thisCtx *baseCancelableContext) WithErrLogFn(errLogFn errLogFn) CancelableContext {
 	thisCtx.errLogFn = errLogFn
 	return thisCtx
 }
 
-func (thisCtx *baseCancelableContext) getErrLogFn() logFn {
+func (thisCtx *baseCancelableContext) getErrLogFn() errLogFn {
 	if thisCtx.errLogFn != nil {
 		return thisCtx.errLogFn
 	}

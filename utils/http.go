@@ -15,17 +15,17 @@ func getJSON(url string) []byte {
 
 	// Send HTTP GET request
 	response, errGet := http.Get(url)
-	FatalIfErr(errGet)
+	FatalIfErr(nil, errGet)
 	defer response.Body.Close()
 
 	// Read the response body
 	body, errRead := io.ReadAll(response.Body)
-	FatalIfErr(errRead)
+	FatalIfErr(nil, errRead)
 
 	return body
 }
 
 // getting JSON and unmarshaling it right away into a given object
 func jsonAsStruct(url string, obj any) {
-	FatalIfErr(json.Unmarshal(getJSON(url), obj))
+	FatalIfErr(nil, json.Unmarshal(getJSON(url), obj))
 }

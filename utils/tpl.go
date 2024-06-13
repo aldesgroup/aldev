@@ -19,13 +19,13 @@ func EnsureFileFromTemplate(cfg *AldevConfig, filepath, tpl string, params ...an
 
 	// Create a new template
 	tmpl, errTpl := template.New(filepath).Parse(content)
-	FatalIfErr(errTpl)
+	FatalIfErr(nil, errTpl)
 
 	// Create a new file to write the result
 	outputFile, errCreate := os.Create(filepath)
-	FatalIfErr(errCreate)
+	FatalIfErr(nil, errCreate)
 	defer outputFile.Close()
 
 	// Execute the template with the data
-	FatalIfErr(tmpl.Execute(outputFile, cfg))
+	FatalIfErr(nil, tmpl.Execute(outputFile, cfg))
 }

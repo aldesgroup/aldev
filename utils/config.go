@@ -81,10 +81,10 @@ func ReadConfig(cfgFileName string) *AldevConfig {
 
 	// Reading the config file into bytes
 	yamlBytes, errRead := os.ReadFile(cfgFileName)
-	FatalIfErr(errRead)
+	FatalIfErr(nil, errRead)
 
 	// Unmarshalling the YAML file
-	FatalIfErr(yaml.Unmarshal(yamlBytes, cfg))
+	FatalIfErr(nil, yaml.Unmarshal(yamlBytes, cfg))
 
 	return cfg
 }

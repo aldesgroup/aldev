@@ -15,15 +15,15 @@ func EnsureConfigmap(cfg *AldevConfig) {
 
 	// some controls first
 	if cfg.Deploying.Dir == "" {
-		Fatal("Empty 'deploying.dir' config!")
+		Fatal(nil, "Empty 'deploying.dir' config!")
 	}
 	configFile, errStat := os.Stat(configFilepath)
-	FatalIfErr(errStat)
+	FatalIfErr(nil, errStat)
 
 	// (re)init the file
-	baseDir := EnsureDir(cfg.Deploying.Dir, "base")
+	baseDir := EnsureDir(nil, cfg.Deploying.Dir, "base")
 	configMapFilename := path.Join(baseDir, cfg.AppName+"-cm.yaml")
-	WriteStringToFile(configMapFilename, "# generated from api/config.yaml by Aldev")
+	WriteStringToFile(nil, configMapFilename, "# generated from api/config.yaml by Aldev")
 
 	// creating the config map
 	cmd := "kubectl create configmap %s-configmap" // creating a configmap object here
@@ -37,5 +37,5 @@ func EnsureConfigmap(cfg *AldevConfig) {
 	fileContent = strings.Replace(fileContent, "creationTimestamp: null", "creationTimestamp: \"%s\"", 1)
 
 	// outputting it
-	WriteStringToFile(configMapFilename, fileContent, configFile.ModTime().Format("2006-01-02T15:04:05Z"))
+	WriteStringToFile(nil, configMapFilename, fileContent, configFile.ModTime().Format("2006-01-02T15:04:05Z"))
 }

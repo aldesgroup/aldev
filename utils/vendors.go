@@ -28,7 +28,7 @@ func fetchVendoredLibraries(ctx CancelableContext, cfg *AldevConfig) {
 	// checking the environment
 	cacheDir := os.Getenv(AldevCacheDirENVVAR)
 	if cacheDir == "" {
-		Fatal("The cache directory cannot be empty; Env var 'ALDEV_CACHEDIR' should be set (to '../tmp' for instance)")
+		Fatal(ctx, "The cache directory cannot be empty; Env var 'ALDEV_CACHEDIR' should be set (to '../tmp' for instance)")
 	}
 
 	// fetching / refreshing all the vendors in parallel
@@ -81,11 +81,11 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 	latestVersion := &versionObject{Value: allVersions[0], Commit: lastCommit(repoPath, "main")}
 
 	// the target directory
-	vendorDir := EnsureDir(vendor.To, repoName)
+	vendorDir := EnsureDir(ctx, vendor.To, repoName)
 
 	// checking the current version
 	versionFileName := path.Join(vendorDir, versionFILENAME)
-	currentVersion := ReadFileToJson(versionFileName, &versionObject{}, false)
+	currentVersion := ReadFileToJson(ctx, versionFileName, &versionObject{}, false)
 
 	// will there be a next version different from the current one?
 	var nextVersion *versionObject
@@ -105,7 +105,7 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 		if currentVersion == nil || currentVersion.Value != vendor.Version {
 			// checking the required version exists!
 			if !InSlice(allVersions, vendor.Version) {
-				Fatal("Required version '%s' does not exist in project '%s'", vendor.Version, repoName)
+				Fatal(ctx, "Required version '%s' does not exist in project '%s'", vendor.Version, repoName)
 			}
 
 			// checking out the required version
@@ -122,11 +122,11 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 	if nextVersion != nil {
 		// removing the previous vendor version first
 		Debug("Cleaning '%s' first, if needed", vendor.To)
-		FatalIfErr(os.RemoveAll(path.Join(vendor.To, repoName)))
+		FatalIfErr(ctx, os.RemoveAll(path.Join(vendor.To, repoName)))
 
 		// copying the new vendor code + version file
 		QuickRun("Copying this repo into project: "+repoName, "cp -r %s/%s/. %s", repoPath, vendor.From, vendorDir)
-		WriteJsonObjToFile(versionFileName, nextVersion)
+		WriteJsonObjToFile(ctx, versionFileName, nextVersion)
 
 		// bit of logging
 		if currentVersion != nil {

@@ -60,7 +60,7 @@ func aldevCompleteRun(command *cobra.Command, args []string) {
 
 	// control
 	if cfg.API.BinDir == "" {
-		utils.Fatal("Aldev config item `.api.bindir` (relative path for the temp folder) is empty!")
+		utils.Fatal(nil, "Aldev config item `.api.bindir` (relative path for the temp folder) is empty!")
 	}
 
 	// // some args for the code generation part

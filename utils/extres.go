@@ -15,10 +15,10 @@ func DownloadExternalResources(ctx CancelableContext, cfg *AldevConfig) {
 	// making sure the cache folder exists if we need it
 	if len(cfg.Vendors) > 0 {
 		if os.Getenv(AldevCacheDirENVVAR) == "" {
-			Fatal("The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)", AldevCacheDirENVVAR)
+			Fatal(ctx, "The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)", AldevCacheDirENVVAR)
 		}
 
-		EnsureDir(os.Getenv(AldevCacheDirENVVAR))
+		EnsureDir(ctx, os.Getenv(AldevCacheDirENVVAR))
 	}
 
 	// syncing

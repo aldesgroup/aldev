@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"time"
 )
 
 var (
@@ -35,6 +36,8 @@ func Info(str string, params ...any) {
 }
 
 type logFn func(string, ...any)
+
+type errLogFn func(CancelableContext, string, ...any)
 
 func log(preambleMsg string, fn logFn, separator, str string, params ...any) {
 	println("")
@@ -64,18 +67,23 @@ func Error(str string, params ...any) {
 	log("", slog.Error, "*", str, params...)
 }
 
-func Fatal(str string, params ...any) {
+func Fatal(ctx CancelableContext, str string, params ...any) {
 	Error(str, params...)
 	Info(string(debug.Stack()))
+	if ctx != nil {
+		ctx.CancelAll()
+	}
+	Debug("Waiting a bit for other processes to finish")
+	time.Sleep(2 * time.Second)
 	os.Exit(1)
 }
 
-func FatalErr(err error) {
-	Fatal("An error has occurred: %s", err)
+func FatalErr(ctx CancelableContext, err error) {
+	Fatal(ctx, "An error has occurred: %s", err)
 }
 
-func FatalIfErr(err error) {
+func FatalIfErr(ctx CancelableContext, err error) {
 	if err != nil {
-		FatalErr(err)
+		FatalErr(ctx, err)
 	}
 }
