@@ -46,26 +46,35 @@ docker_build_with_restart(
 # deploying the API
 k8s_resource('{{.AppName}}-api-depl', resource_deps=['{{.AppName}}-api-compile'])
 
-# getting the load balancer's IP & port - cf https://docs.tilt.dev/extensions.html
+# getting the load balancer's IP - cf https://docs.tilt.dev/extensions.html
 apiHost = str(local(echo_off=True, command="kubectl get services --namespace kube-system "+
   "-o jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].status.loadBalancer.ingress[0].ip}'"))
 
 # --- WEB part ----------------------------------------------------------------
 
+# since the load balancer is on host 'apiHost' and not 'localhost', we can reach it by sending calls
+# to localhost:apiPort - from Windows for instance - and proxying them inside Linux to apiHost:apiPort
+local_resource(
+    name         ='{{.AppName}}-lb-proxy',
+    cmd          ='killall -q socat || true',
+    serve_cmd    ='socat TCP-LISTEN:{{.API.Port}},fork TCP:'+apiHost+':{{.API.Port}}',
+    resource_deps=['{{.AppName}}-api-depl'],
+    )
+
 # if we're developing libraries along with this project, then:
 if useLocalDeps:
-  webAppEnvVars = "WEB_API_URL=http://"+apiHost+":{{.API.Port}}"
+  webAppEnvVars = "WEB_API_URL=http://localhost:{{.API.Port}}"
   {{range .Web.EnvVars}}webAppEnvVars += " {{.Name}}={{.Value}}"
   {{end}}
   # locally running Vite's dev server - no need to containerize this for now
   local_resource(
       name         ='{{.AppName}}-vite-serve',
       dir          ='{{.Web.SrcDir}}',
-      cmd          ='rm -fr node_modules/.vite && npm i',
+      cmd          ='rm -fr node_modules/.vite && npm i --force',
       deps         =['{{.Web.SrcDir}}/package.json'],
       serve_cmd    =webAppEnvVars + ' npm run dev',
       serve_dir    ='{{.Web.SrcDir}}',
-      resource_deps=['{{.AppName}}-api-depl'],
+      resource_deps=['{{.AppName}}-lb-proxy'],
       )
 else:
   docker_build(
