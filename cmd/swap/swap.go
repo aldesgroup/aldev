@@ -211,7 +211,8 @@ func (thisSet *swapSet) buildFrom(ctx utils.CancelableContext, dir string) *swap
 			}
 		} else {
 			for _, targetPath := range thisSet.swapConf.For {
-				if matched, _ := filepath.Match(targetPath, entry.Name()); matched && !done[filename] {
+				matched, _ := filepath.Match(targetPath, entry.Name())
+				if matched && !done[filename] {
 					thisSet.files = append(thisSet.files, filename)
 					folders[dir] = true
 					done[filename] = true
@@ -224,7 +225,8 @@ func (thisSet *swapSet) buildFrom(ctx utils.CancelableContext, dir string) *swap
 	return thisSet
 }
 
-const comment = " /* " + utils.TagHOTSWAPPED + " do not commit! */"
+const inlineComment = " /* " + utils.TagHOTSWAPPED + " do not commit! */"
+const eofComment = " // " + utils.TagHOTSWAPPED + " do not commit!"
 
 // writing all the swaps for the files of the given set
 func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
@@ -241,6 +243,10 @@ func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
 
 		// performing all the needed swaps
 		for _, swap := range thisSet.swapConf.Do {
+			comment := inlineComment
+			if swap.EOFCom {
+				comment = eofComment
+			}
 			if !rollback { // swapping
 				modifiedText = strings.ReplaceAll(modifiedText, swap.Replace, swap.With+comment)
 			} else { // swapping back

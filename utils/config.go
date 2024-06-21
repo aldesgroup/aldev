@@ -52,6 +52,7 @@ type LocalSwapsConfig struct {
 	Do   []*struct {
 		Replace string // the substring to look for and replace
 		With    string // the replacement
+		EOFCom  bool   // should the added comment (HOTSWAPPED) be at the end of the line (// ...) rather than inline (/* ... */) ?
 	}
 }
 
