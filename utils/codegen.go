@@ -41,13 +41,15 @@ func GenerateConfigs(cfg *AldevConfig) {
 	addOverlay(cfg, overlaysDir, "production", nil)
 
 	// deployment with Gitlab
-	EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
+	// EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
 
 	// last but not least, the Tiltfile
 	EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
 
 	// list of env vars for the web app
-	EnsureFileFromTemplate(cfg, path.Join(cfg.Web.SrcDir, ".env-list"), templates.WebEnvList)
+	if !cfg.APIOnly {
+		EnsureFileFromTemplate(cfg, path.Join(cfg.Web.SrcDir, ".env-list"), templates.WebEnvList)
+	}
 }
 
 // ----------------------------------------------------------------------------

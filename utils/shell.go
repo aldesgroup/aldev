@@ -22,7 +22,11 @@ func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsStrin
 }
 
 func QuickRun(whyRunThis string, commandAsString string, params ...any) {
-	Run(whyRunThis, NewBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
+	if verbose {
+		Run(whyRunThis, NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout), false, commandAsString, params...)
+	} else {
+		Run(whyRunThis, NewBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
+	}
 }
 
 func RunAndGet(whyRunThis string, execDir string, logStart bool, commandAsString string, params ...any) []byte {

@@ -42,9 +42,10 @@ var aldevCmd = &cobra.Command{
 
 var (
 	// flags
-	cfgFileName  string
-	verbose      bool
-	useLocalDeps bool
+	cfgFileName       string
+	verbose           bool
+	useLocalDeps      bool
+	disableGeneration bool
 )
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
 	aldevCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "l", false,
 		"to use the local dependencies declared in the config file")
+	aldevCmd.PersistentFlags().BoolVarP(&disableGeneration, "disable-generation", "d", false, "disable the generation of all the config files, but not code generation")
 }
 
 // ----------------------------------------------------------------------------
@@ -103,7 +105,7 @@ func aldevRun(command *cobra.Command, args []string) {
 	// for which file changes are we going to restart the main loop?
 	watched := []string{cfgFileName} // Aldev's config
 	if cfg.API != nil {
-		watched = append(watched, path.Join(cfg.API.SrcDir, cfg.API.Config)) // the API's config
+		watched = append(watched, path.Join(cfg.GetSrcDir(), cfg.GetConfigPath())) // the API or lib's config
 	}
 
 	// adding a watcher to detect some file changes
@@ -184,7 +186,9 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	} else {
 
 		// Generating config files for deploying the app locally, CI / CD, etc.
-		utils.GenerateConfigs(cfg)
+		if !disableGeneration {
+			utils.GenerateConfigs(cfg)
+		}
 
 		// Ready for launch
 		utils.Launch(ctx, cfg)

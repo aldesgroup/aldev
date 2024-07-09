@@ -13,9 +13,12 @@ import (
 type AldevConfig struct {
 	AppName string    // the name of the app - beware: the key has to be "appname" in the YAML file
 	Lib     *struct { // if this section's non-empty, then this project is not an app but a library, and section "API", "Web", "Deploying" are discarded
-		SrcDir  string // where the library source code can be found
-		Install string // command that should be run to install stuff, like needed dependencies, etc.
-		Develop string // command that should be run to allow for continuously developping & building the library
+		SrcDir         string // where the library source code can be found
+		Config         string // the path to the config file for the API, from the API's folder
+		Install        string // command that should be run to install stuff, like needed dependencies, etc.
+		Develop        string // command that should be run to allow for continuously developping & building the library
+		BinDir         string // the directory where to find the library's compiled binary, as seen from the library source folder (srcdir)
+		resolvedBinDir string // the bin directory as seen from the project's root
 	}
 	API *struct {
 		SrcDir string // where the API's Goald-based code should be found
@@ -30,7 +33,8 @@ type AldevConfig struct {
 		BinDir         string // the directory where to find the API's compiled binary, as seen from the API source folder (srcdir)
 		resolvedBinDir string // the bin directory as seen from the project's root
 	}
-	Web *struct {
+	APIOnly bool // if true, then no web app is handled
+	Web     *struct {
 		SrcDir  string      // where the Web app's GoaldR-based code should be found
 		Port    int         // the port used to expose the app's frontend
 		EnvVars []*struct { // environment variables to pass to the web app
@@ -67,7 +71,39 @@ func (thisCfg *AldevConfig) IsLibrary() bool {
 	return thisCfg.Lib != nil
 }
 
+func (thisCfg *AldevConfig) GetSrcDir() string {
+	if thisCfg.IsLibrary() {
+		return thisCfg.Lib.SrcDir
+	}
+
+	return thisCfg.API.SrcDir
+}
+
+func (thisCfg *AldevConfig) GetBinDir() string {
+	if thisCfg.IsLibrary() {
+		return thisCfg.Lib.BinDir
+	}
+
+	return thisCfg.API.BinDir
+}
+
+func (thisCfg *AldevConfig) GetConfigPath() string {
+	if thisCfg.IsLibrary() {
+		return thisCfg.Lib.Config
+	}
+
+	return thisCfg.API.Config
+}
+
 func (thisCfg *AldevConfig) GetResolvedBinDir() string {
+	if thisCfg.IsLibrary() {
+		if thisCfg.Lib.resolvedBinDir == "" {
+			thisCfg.Lib.resolvedBinDir = path.Join(thisCfg.Lib.SrcDir, thisCfg.Lib.BinDir)
+		}
+
+		return thisCfg.Lib.resolvedBinDir
+	}
+
 	if thisCfg.API.resolvedBinDir == "" {
 		thisCfg.API.resolvedBinDir = path.Join(thisCfg.API.SrcDir, thisCfg.API.BinDir)
 	}

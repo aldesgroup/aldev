@@ -17,6 +17,9 @@ func Launch(ctx CancelableContext, cfg *AldevConfig) {
 	if useLocalDeps {
 		tiltOptions = " --use-local"
 	}
+	if cfg.APIOnly {
+		tiltOptions += " --api-only"
+	}
 	if tiltOptions != "" {
 		tiltOptions = " --" + tiltOptions
 	}

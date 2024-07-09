@@ -66,7 +66,7 @@ func ReadFileToJson[T any, Y *T](ctx CancelableContext, filename string, obj Y, 
 	if fileBytes := ReadFile(ctx, filename, failIfNotExist); fileBytes != nil {
 		FatalIfErr(ctx, json.Unmarshal(fileBytes, obj))
 	}
-	return nil
+	return obj
 }
 
 func ReplaceInFile(ctx CancelableContext, filename string, replacements map[string]string) {

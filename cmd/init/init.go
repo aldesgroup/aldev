@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aldesgroup/aldev/cmd"
+	"github.com/aldesgroup/aldev/templates"
 	"github.com/aldesgroup/aldev/utils"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,7 @@ var (
 	// cfgFileName  string
 	verbose     bool
 	projectName string
+	apiOnly     bool
 )
 
 func init() {
@@ -40,6 +42,7 @@ func init() {
 	cmd.GetAldevCmd().AddCommand(aldevInitCmd)
 	aldevInitCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 	aldevInitCmd.Flags().StringVarP(&projectName, "name", "n", "", "the name of the project to create; should not contain any space")
+	aldevInitCmd.Flags().BoolVarP(&apiOnly, "apiOnly", "a", false, "no web app part, i.e. pure API mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -87,22 +90,39 @@ func aldevInitRun(command *cobra.Command, args []string) {
 		"git clone git@%s:%s.git %s", initURL[:firstSlashIndex], initURL[firstSlashIndex+1:], projectName)
 
 	// removing the .git folder, and the .gitignore file
-	projDir := path.Join(cacheDir, projectName)
-	cachedProjCtx := ctx.WithExecDir(projDir)
+	cachedProjDir := path.Join(cacheDir, projectName)
+	cachedProjCtx := ctx.WithExecDir(cachedProjDir)
 	utils.Run("removing the .git folder", cachedProjCtx, false, "rm -fr .git")
 	utils.Run("removing the .gitignore file", cachedProjCtx, false, "rm -f .gitignore")
+	utils.Run("removing the README file", cachedProjCtx, false, "rm -f README.md")
 
 	// some replacements to customize the project
-	utils.ReplaceInFile(nil, path.Join(projDir, ".aldev.yaml"), map[string]string{"fullstack-app-template": projectName})
-	utils.ReplaceInFile(nil, path.Join(projDir, "README.md"), map[string]string{"# fullstack-app-template": "# " + projectName})
-	utils.ReplaceInFile(nil, path.Join(projDir, "api", "go.mod"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
-	utils.ReplaceInFile(nil, path.Join(projDir, "api", "main", "1-start.go"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
-	utils.ReplaceInFile(nil, path.Join(projDir, "webapp", "vite.config.ts"), map[string]string{"fullstack-app-template": projectName})
-	utils.ReplaceInFile(nil, path.Join(projDir, "webapp", "src", "routes", "+__root.tsx"), map[string]string{"fullstack-app-template": projectName})
+	// TODO handle custom api / webapp name,
+	// TODO + git target repo instead of just project name, to handle auto git init & push
+	utils.ReplaceInFile(nil, path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{"fullstack-app-template": projectName})
+	utils.ReplaceInFile(nil, path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{"apionly: false": "apionly: true"})
+	utils.ReplaceInFile(nil, path.Join(cachedProjDir, "api", "go.mod"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
+	utils.ReplaceInFile(nil, path.Join(cachedProjDir, "api", "main", "1-start.go"), map[string]string{"/libs/fullstack-app-template": "/web/" + projectName})
+	utils.ReplaceInFile(nil, path.Join(cachedProjDir, "webapp", "vite.config.ts"), map[string]string{"fullstack-app-template": projectName})
+	utils.ReplaceInFile(nil, path.Join(cachedProjDir, "webapp", "src", "routes", "+__root.tsx"), map[string]string{"fullstack-app-template": projectName})
+
+	// pure API mode
+	if apiOnly {
+		utils.Run("removing the webapp part", cachedProjCtx, false, "rm -fr webapp")
+	}
 
 	// moving it
 	utils.Run("moving the project", utils.NewBaseContext().WithStdErrWriter(io.Discard), false,
 		"mv %s %s", path.Join(cacheDir, projectName), projectName)
+
+	// TODO make it more customizable
+	newProjCtx := ctx.WithExecDir(projectName)
+	utils.Run("initializing Git", newProjCtx, false, "git init")
+	utils.EnsureFileFromTemplate(nil, path.Join(projectName, ".gitignore"), templates.GitIgnore)
+	utils.Run("adding the files", newProjCtx, false, "git add .")
+	utils.Run("committing the files", newProjCtx, false, "git commit -m \"dev: new aldev project\"") // TODO this fails for now
+	utils.Run("pushing the first commit", newProjCtx, false,
+		"git push --set-upstream git@git-ext.aldes.com:prodigtools/web/%s.git main", projectName)
 
 	// we're done
 	utils.Info("Done initialising an aldev project in %s", time.Since(start))
