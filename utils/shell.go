@@ -23,7 +23,7 @@ func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsStrin
 
 func QuickRun(whyRunThis string, commandAsString string, params ...any) {
 	if verbose {
-		Run(whyRunThis, NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout), false, commandAsString, params...)
+		Run(whyRunThis, NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout), verbose, commandAsString, params...)
 	} else {
 		Run(whyRunThis, NewBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
 	}
