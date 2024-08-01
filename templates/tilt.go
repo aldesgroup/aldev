@@ -68,6 +68,7 @@ local_resource(
 if not apiOnly:
   # if we're developing libraries along with this project, then:
   if useLocalDeps:
+    # these are the env vars defined in the aldev config file (.aldev.yaml)
     webAppEnvVars = "WEB_API_URL=http://localhost:{{.API.Port}}"
     {{range .Web.EnvVars}}webAppEnvVars += " {{.Name}}={{.Value}}"
     {{end}}
