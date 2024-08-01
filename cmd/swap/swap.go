@@ -81,7 +81,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx, cfg)
 
 	// performing the initial swaps
-	doAllTheSwaps(aldevCtx, false, true)
+	doAllTheSwaps(aldevCtx, cfg, false, true)
 
 	// adding a watcher to detect some file changes, for additional needed swaps
 	watcher := utils.WatcherFor(watchedFolders...)
@@ -95,7 +95,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 		time.Sleep(10 * time.Millisecond)
 
 		// performing the swaps, in reverse
-		doAllTheSwaps(aldevCtx, true, true)
+		doAllTheSwaps(aldevCtx, cfg, true, true)
 	}()
 
 	// watching all the files here and rebooting the watching if something is changed
@@ -129,7 +129,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 						time.Sleep(200 * time.Millisecond)
 
 						// performing the swaps on the newly computed sets
-						doAllTheSwaps(aldevCtx, false, false)
+						doAllTheSwaps(aldevCtx, cfg, false, false)
 
 					}
 				}
@@ -144,7 +144,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	<-aldevCtx.Done()
 }
 
-func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish bool) {
+func doAllTheSwaps(ctx utils.CancelableContext, cfg *utils.AldevConfig, rollback bool, startOrFinish bool) {
 	// we're not allowing forward swaps if we're finished, only rollbacks
 	if isFinished() && !rollback {
 		return
@@ -168,6 +168,10 @@ func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish boo
 
 	// waiting a bit here in order to prevent the watcher to detect the changes done here
 	time.Sleep(50 * time.Millisecond)
+
+	// syncing the Go.sum file with the swaps done
+	goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(cfg.GetSrcDir())
+	utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
 }
 
 // a set associates a swap config, and the files that should be modified according to it
