@@ -65,8 +65,8 @@ func aldevCompleteRun(command *cobra.Command, args []string) {
 
 	// repeated commands
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.GetBinDir(), cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", cfg.GetResolvedBinDir(), cfg.AppName,
-		path.Join(cfg.GetSrcDir(), cfg.GetConfigPath()), cfg.GetSrcDir())
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s -webdir %s", cfg.GetResolvedBinDir(), cfg.AppName,
+		path.Join(cfg.GetSrcDir(), cfg.GetConfigPath()), cfg.GetSrcDir(), cfg.Web.SrcDir)
 
 	// compilation n°1 - this is needed to have the run command up-to-date
 	utils.Run("Only compiling & formatting the code", completeCtx, false, mainCompileCmd)
