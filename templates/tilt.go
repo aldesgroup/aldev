@@ -28,7 +28,7 @@ local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='aldev complete',
     # taking into account the dependencies
-    deps  =['{{.API.SrcDir}}', '../goald'],
+    deps  =['{{.API.SrcDir}}', '../goald', '../emerald'],
     # the API config is also ignored here, because Aldev is already watching it
     ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.SrcDir}}/**/*/classutils', '{{.API.Config}}'],
     )

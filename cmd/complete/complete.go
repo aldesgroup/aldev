@@ -25,6 +25,7 @@ var aldevCompleteCmd = &cobra.Command{
 
 var (
 	compilationOnly bool
+	regen           bool
 	verbose         bool
 )
 
@@ -33,6 +34,7 @@ func init() {
 	cmd.GetAldevCmd().AddCommand(aldevCompleteCmd)
 
 	aldevCompleteCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
+	aldevCompleteCmd.Flags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration")
 	aldevCompleteCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
@@ -75,20 +77,25 @@ func aldevCompleteRun(command *cobra.Command, args []string) {
 		return
 	}
 
+	regenArg := ""
+	if regen {
+		regenArg = " -regen"
+	}
+
 	// generation step n°1
-	utils.QuickRun("Generating stuff: DB list, BO registry...", mainRunCmd+" -codegen 1")
+	utils.QuickRun("Generating stuff: DB list, BO registry...", mainRunCmd+" -codegen 1"+regenArg)
 
 	// compilation n°2
 	utils.Run("Does it still compile after codegen step 1?", completeCtx, false, mainCompileCmd)
 
 	// generation step n°2
-	utils.QuickRun("Generating stuff: BO classes...", mainRunCmd+" -codegen 2")
+	utils.QuickRun("Generating stuff: BO classes...", mainRunCmd+" -codegen 2"+regenArg)
 
 	// compilation n°3
 	utils.Run("Does it still compile after codegen step 2?", completeCtx, false, mainCompileCmd)
 
 	// generation step n°3
-	utils.QuickRun("Generating stuff: BO utils...", mainRunCmd+" -codegen 3")
+	utils.QuickRun("Generating stuff: BO utils...", mainRunCmd+" -codegen 3"+regenArg)
 
 	// compilation n°4
 	utils.Run("Does it still compile after codegen step 3?", completeCtx, false, mainCompileCmd)
