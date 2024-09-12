@@ -15,10 +15,9 @@ type googleTranslations struct {
 }
 
 type translation struct {
-	Route  string   `json:"r"`
-	Part   string   `json:"p"`
-	Key    string   `json:"k"`
-	Values []string `json:"v"`
+	Namespace string   `json:"n"`
+	Key       string   `json:"k"`
+	Values    []string `json:"v"`
 }
 
 func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
@@ -42,10 +41,9 @@ func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
 
 	// controlling the header row
 	header := gooTranslations.Values[0]
-	routeCol := 0
-	partCol := 1
-	keyCol := 2
-	valueColStart := 2
+	namespaceCol := 0
+	keyCol := 1
+	valueColStart := 3
 	if header[keyCol] != "EN" {
 		// the english translation is part of the key
 		Error("The third column should be the EN translation column")
@@ -67,9 +65,8 @@ func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
 
 		// building the translation object
 		translation := &translation{
-			Route: trim(row[routeCol]),
-			Part:  trim(row[partCol]),
-			Key:   keyFromEnglishTranslation(trim(row[keyCol]), cfg.API.I18n.KeySize),
+			Namespace: trim(row[namespaceCol]),
+			Key:       keyFromEnglishTranslation(trim(row[keyCol]), cfg.API.I18n.KeySize),
 		}
 
 		for colIdx := valueColStart; colIdx <= lastCol; colIdx++ {
@@ -81,7 +78,7 @@ func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
 	}
 
 	// jsonification
-	jsonOutput, errJson := json.MarshalIndent(output, "", "  ")
+	jsonOutput, errJson := json.MarshalIndent(output, "", "  ") // TODO NO... let's sort the keys!!
 	FatalIfErr(ctx, errJson)
 
 	// writing out to a file

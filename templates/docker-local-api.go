@@ -5,5 +5,5 @@ FROM alpine:latest
 RUN apk update && apk add --no-cache bash
 WORKDIR /api
 COPY ./{{.GetResolvedBinDir}} .
-COPY ./{{.API.DataDir}} .
+COPY ./{{.API.DataDir}} data
 ENTRYPOINT ./{{.AppName}}-api-local`

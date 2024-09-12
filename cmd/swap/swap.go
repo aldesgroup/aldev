@@ -130,7 +130,6 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 
 						// performing the swaps on the newly computed sets
 						doAllTheSwaps(aldevCtx, cfg, false, false)
-
 					}
 				}
 
@@ -206,7 +205,7 @@ func (thisSet *swapSet) buildFrom(ctx utils.CancelableContext, dir string) *swap
 	for _, entry := range entries {
 		filename := path.Join(dir, entry.Name())
 		if entry.IsDir() {
-			if entry.Name() != "node_modules" && entry.Name() != ".git" && entry.Name() != "dist" {
+			if entry.Name() != "node_modules" && entry.Name() != ".git" && entry.Name() != "dist" && entry.Name() != "vendor" {
 				initialNbFolders := len(folders)
 				thisSet.buildFrom(ctx, filename)
 				if len(folders) > initialNbFolders {

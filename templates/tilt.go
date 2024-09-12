@@ -28,9 +28,9 @@ local_resource(
     name  ='{{.AppName}}-api-compile',
     cmd   ='aldev complete',
     # taking into account the dependencies
-    deps  =['{{.API.SrcDir}}', '../goald', '../emerald'],
+    deps  =['{{.API.SrcDir}}', '../goald', '../emerald'], # REMOVE EMERALD
     # the API config is also ignored here, because Aldev is already watching it
-    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_generated', '{{.API.SrcDir}}/**/*/classutils', '{{.API.Config}}'],
+    ignore=['{{.API.SrcDir}}/go.sum', '{{.API.SrcDir}}/_include', '{{.API.SrcDir}}/**/*/classutils', '{{.API.Config}}'],
     )
 
 # describing the containers for the backend - cf https://docs.tilt.dev/extensions.html
@@ -43,7 +43,7 @@ docker_build_with_restart(
   only       =['./{{.GetResolvedBinDir}}', './{{.API.DataDir}}'],
   live_update=[
     sync('./{{.GetResolvedBinDir}}', '/api'),
-    sync('./{{.API.DataDir}}', '/api'),
+    sync('./{{.API.DataDir}}', '/api/data'),
   ],
 )
 

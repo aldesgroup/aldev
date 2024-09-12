@@ -67,8 +67,11 @@ func aldevCompleteRun(command *cobra.Command, args []string) {
 
 	// repeated commands
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.GetBinDir(), cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s -webdir %s", cfg.GetResolvedBinDir(), cfg.AppName,
-		path.Join(cfg.GetSrcDir(), cfg.GetConfigPath()), cfg.GetSrcDir(), cfg.Web.SrcDir)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", cfg.GetResolvedBinDir(), cfg.AppName,
+		path.Join(cfg.GetSrcDir(), cfg.GetConfigPath()), cfg.GetSrcDir())
+	if cfg.Web != nil {
+		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, cfg.Web.SrcDir)
+	}
 
 	// compilation n°1 - this is needed to have the run command up-to-date
 	utils.Run("Only compiling & formatting the code", completeCtx, false, mainCompileCmd)
@@ -101,7 +104,7 @@ func aldevCompleteRun(command *cobra.Command, args []string) {
 	utils.Run("Does it still compile after codegen step 3?", completeCtx, false, mainCompileCmd)
 
 	// formatting
-	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(cfg.GetSrcDir(), "_generated"), path.Join(cfg.GetSrcDir(), "main"))
+	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(cfg.GetSrcDir(), "_include"), path.Join(cfg.GetSrcDir(), "main"))
 
 	// migrating the DBs if needed
 	if !cfg.IsLibrary() {
