@@ -73,7 +73,7 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 		Run("git-cloning / caching the '"+repoName+"' repo",
 			NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(cacheDir),
 			false,
-			"git clone git@%s:%s.git", vendor.Repo[:firstSlashIndex], vendor.Repo[firstSlashIndex+1:])
+			"git clone git@%s:%s.git", vendor.Repo[:firstSlashIndex], vendor.Repo[firstSlashIndex+1:]) // TODO handle https for public repos
 	}
 
 	// get the latest version

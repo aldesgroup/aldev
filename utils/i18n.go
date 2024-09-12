@@ -57,7 +57,7 @@ func downloadTranslationsFromGoogle(ctx CancelableContext, cfg *AldevConfig) {
 	// initialising the output object
 	output := make([]*translation, lastRow)
 
-	// going through the data and building the output
+	// going through the data and building the output - keeping the source file's order
 	var row []string
 	for rowIdx := 1; rowIdx <= lastRow; rowIdx++ {
 		// getting the current row

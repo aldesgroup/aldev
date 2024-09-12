@@ -11,8 +11,9 @@ import (
 )
 
 type AldevConfig struct {
-	AppName string    // the name of the app - beware: the key has to be "appname" in the YAML file
-	Lib     *struct { // if this section's non-empty, then this project is not an app but a library, and section "API", "Web", "Deploying" are discarded
+	AppName   string    // the name of the app - beware: the key has to be "appname" in the YAML file
+	Languages string    // the languages available for this app, seperated by a comma - for example: en,fr,it,de,zh,es
+	Lib       *struct { // if this section's non-empty, then this project is not an app but a library, and section "API", "Web", "Deploying" are discarded
 		SrcDir         string // where the library source code can be found
 		Config         string // the path to the config file for the API, from the API's folder
 		Install        string // command that should be run to install stuff, like needed dependencies, etc.
@@ -122,6 +123,19 @@ func ReadConfig(cfgFileName string) *AldevConfig {
 
 	// Unmarshalling the YAML file
 	FatalIfErr(nil, yaml.Unmarshal(yamlBytes, cfg))
+
+	// Adding the languages to the env vars for the web
+	if cfg.Web != nil {
+		cfg.Web.EnvVars = append(cfg.Web.EnvVars, &struct {
+			Name  string
+			Desc  string
+			Value string
+		}{
+			Name:  "WEB_LANGUAGES",
+			Desc:  "the languages that should be available in the web app",
+			Value: cfg.Languages,
+		})
+	}
 
 	return cfg
 }
