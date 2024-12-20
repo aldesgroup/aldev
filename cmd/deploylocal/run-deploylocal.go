@@ -10,38 +10,38 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevLaunchCmd represents a subcommand
-var aldevLaunchCmd = &cobra.Command{
-	Use:   "launch",
+// aldevDeployLocalCmd represents a subcommand
+var aldevDeployLocalCmd = &cobra.Command{
+	Use:   "deploylocal",
 	Short: "Locally deploys the app, i.e. its API and / or its client (web) app",
-	Long:  "This simply launch the app(s), using Tilt, and the pre-existing config files (aldev generate)",
-	Run:   aldevLaunchRun,
+	Long:  "This simply launch the app(s), using Tilt, and the pre-existing config files (aldev confgen)",
+	Run:   aldevDeployLocalRun,
 }
 
 var (
 	// cfgFileName  string
-	verbose      bool
-	useLocalDeps bool
+	verbose  bool
+	swapCode bool
 )
 
 func init() {
 	// linking to the root command
-	cmd.GetAldevCmd().AddCommand(aldevLaunchCmd)
-	aldevLaunchCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
-	aldevLaunchCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "u", false,
-		"to use the local versions of the dependencies declared in the config file")
+	cmd.GetAldevCmd().AddCommand(aldevDeployLocalCmd)
+	aldevDeployLocalCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
+	aldevDeployLocalCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
+		"use swapping of code, to use the local version of some dependencies for instance")
 }
 
 // ----------------------------------------------------------------------------
 // Main logic
 // ----------------------------------------------------------------------------
 
-func aldevLaunchRun(command *cobra.Command, args []string) {
+func aldevDeployLocalRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	cmd.ReadCommonArgsAndConfig()
 
-	if useLocalDeps {
-		utils.SetUseLocalDeps()
+	if swapCode {
+		utils.UseCodeSwaps()
 	}
 
 	// the main cancelable context, that should stop everything

@@ -19,15 +19,15 @@ import (
 
 const aldevINITxREPO = "ALDEV_INITREPO"
 
-// aldevInitCmd represents a subcommand
-var aldevInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initiates a new aldev project",
+// aldevBootstrapCmd represents a subcommand
+var aldevBootstrapCmd = &cobra.Command{
+	Use:   "bootstrap",
+	Short: "Bootstraps a new aldev project",
 	Long: "Depends on an environment variable " + aldevINITxREPO + ", that should point to a git-clonable project " +
 		"containing a kind of template for aldev projects, i.e. a project with a very generic aldev config file " +
 		"(.aldev.yaml), a bit of API & web app code, that should work out of the box with the 'aldev' command. " +
 		"e.g.: github.com/mydomain/myprojecttemplate",
-	Run: aldevInitRun,
+	Run: aldevBootstrapRun,
 }
 
 var (
@@ -39,17 +39,17 @@ var (
 
 func init() {
 	// linking to the root command
-	cmd.GetAldevCmd().AddCommand(aldevInitCmd)
-	aldevInitCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
-	aldevInitCmd.Flags().StringVarP(&projectName, "name", "n", "", "the name of the project to create; should not contain any space")
-	aldevInitCmd.Flags().BoolVarP(&apiOnly, "apiOnly", "a", false, "no web app part, i.e. pure API mode")
+	cmd.GetAldevCmd().AddCommand(aldevBootstrapCmd)
+	aldevBootstrapCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
+	aldevBootstrapCmd.Flags().StringVarP(&projectName, "name", "n", "", "the name of the project to create; should not contain any space")
+	aldevBootstrapCmd.Flags().BoolVarP(&apiOnly, "apiOnly", "a", false, "no web app part, i.e. pure API mode")
 }
 
 // ----------------------------------------------------------------------------
 // Main logic
 // ----------------------------------------------------------------------------
 
-func aldevInitRun(command *cobra.Command, args []string) {
+func aldevBootstrapRun(command *cobra.Command, args []string) {
 	// handling the verbosity
 	utils.SetVerbose(verbose)
 

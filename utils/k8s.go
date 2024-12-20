@@ -52,7 +52,7 @@ func DeployToLocalCluster(ctx CancelableContext) {
 	}
 
 	// computing the custom options
-	if useLocalDeps {
+	if swapCode {
 		tiltOptions = " --use-local"
 	}
 	if IsDevAPI() {
@@ -64,7 +64,7 @@ func DeployToLocalCluster(ctx CancelableContext) {
 
 	// making sure the namespace is fresh
 	kustomization := "dev"
-	if useLocalDeps {
+	if swapCode {
 		kustomization = "local"
 	}
 	if string(RunAndGet("We want to check what's in our namespace", ".", false,

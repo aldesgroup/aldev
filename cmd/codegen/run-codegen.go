@@ -14,13 +14,13 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevCompleteCmd represents a subcommand
-var aldevCompleteCmd = &cobra.Command{
-	Use:   "complete",
+// aldevCodegenCmd represents a subcommand
+var aldevCodegenCmd = &cobra.Command{
+	Use:   "codegen",
 	Short: "Completes the app with additional generated code to speed up your dev",
 	Long: "This generates additional code to provide you with useful handles on DB lists" +
 		"business object classes & their properties, and more. And re-compiles the whole app.",
-	Run: aldevCompleteRun,
+	Run: aldevCodegenRun,
 }
 
 var (
@@ -30,10 +30,10 @@ var (
 
 func init() {
 	// linking to the root command
-	cmd.GetAldevCmd().AddCommand(aldevCompleteCmd)
+	cmd.GetAldevCmd().AddCommand(aldevCodegenCmd)
 
-	aldevCompleteCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
-	aldevCompleteCmd.Flags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration")
+	aldevCodegenCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
+	aldevCodegenCmd.Flags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration")
 }
 
 // ----------------------------------------------------------------------------
@@ -41,7 +41,7 @@ func init() {
 // ----------------------------------------------------------------------------
 
 // TODO handle compilation errors = rollbacks on previous situation
-func aldevCompleteRun(command *cobra.Command, args []string) {
+func aldevCodegenRun(command *cobra.Command, args []string) {
 	start := time.Now()
 
 	// Reading this command's arguments, and reading the aldev YAML config file

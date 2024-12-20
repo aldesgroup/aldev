@@ -72,9 +72,9 @@ func IsDevNative() bool {
 // ----------------------------------------------------------------------------
 
 var (
-	useLocalDeps bool
+	swapCode bool
 )
 
-func SetUseLocalDeps() {
-	useLocalDeps = true
+func UseCodeSwaps() {
+	swapCode = true
 }

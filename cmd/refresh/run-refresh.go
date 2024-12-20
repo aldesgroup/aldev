@@ -10,13 +10,13 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
-// aldevDownloadCmd represents a subcommand
-var aldevDownloadCmd = &cobra.Command{
-	Use:   "download",
-	Short: "Downloads the Aldev environment's required external resources",
+// aldevRefreshCmd represents a subcommand
+var aldevRefreshCmd = &cobra.Command{
+	Use:   "refresh",
+	Short: "Refreshes the Aldev environment's required external resources",
 	Long: "This downloads the required external resources in their latest version, " +
-		"like the i18n file with up-to-date translations, or some required dependencies.",
-	Run: aldevDownloadRun,
+		"like the i18n files with up-to-date translations, or some required dependencies.",
+	Run: aldevRefreshRun,
 }
 
 var (
@@ -25,14 +25,14 @@ var (
 
 func init() {
 	// linking to the root command
-	cmd.GetAldevCmd().AddCommand(aldevDownloadCmd)
+	cmd.GetAldevCmd().AddCommand(aldevRefreshCmd)
 }
 
 // ----------------------------------------------------------------------------
 // Main logic
 // ----------------------------------------------------------------------------
 
-func aldevDownloadRun(command *cobra.Command, args []string) {
+func aldevRefreshRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	cmd.ReadCommonArgsAndConfig()
 

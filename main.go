@@ -5,12 +5,12 @@ package main
 
 import (
 	"github.com/aldesgroup/aldev/cmd"
-	_ "github.com/aldesgroup/aldev/cmd/complete"
-	_ "github.com/aldesgroup/aldev/cmd/download"
-	_ "github.com/aldesgroup/aldev/cmd/generate"
-	_ "github.com/aldesgroup/aldev/cmd/init"
-	_ "github.com/aldesgroup/aldev/cmd/launch"
-	_ "github.com/aldesgroup/aldev/cmd/swap"
+	_ "github.com/aldesgroup/aldev/cmd/bootstrap"
+	_ "github.com/aldesgroup/aldev/cmd/codegen"
+	_ "github.com/aldesgroup/aldev/cmd/codeswap"
+	_ "github.com/aldesgroup/aldev/cmd/confgen"
+	_ "github.com/aldesgroup/aldev/cmd/deploylocal"
+	_ "github.com/aldesgroup/aldev/cmd/refresh"
 )
 
 func main() {

@@ -35,8 +35,9 @@ func Execute() {
 var aldevCmd = &cobra.Command{
 	Use:   "aldev",
 	Short: "Quick dev with Goald, GoaldR and / GoaldN, & Docker / Kubernetes",
-	Long: "Run Aldev to start or continue developing a Goald / GoaldR or GoaldN application " +
-		"with automatic deployment in a local k8s cluster and live reloading (when applicable).",
+	Long: "Run `aldev` to start or continue developing a Goald / GoaldR or GoaldN application, " +
+		"with automatic deployment in a local k8s cluster and live reloading when applicable. " +
+		"Or use one of the available command to perform a specific action.",
 	Run: aldevRun,
 }
 
@@ -44,8 +45,8 @@ var (
 	// flags
 	cfgFileName           string
 	verbose               bool
-	useLocalDeps          bool
-	disableGeneration     bool
+	swapCode              bool
+	disableConfgen        bool
 	api, lib, web, native bool // the 4 aldev modes, one and only one must be true at a time
 )
 
@@ -59,9 +60,9 @@ func init() {
 	aldevCmd.PersistentFlags().BoolVarP(&native, "native", "n", false, "when developing a native app (Windows)")
 
 	// arguments for the "aldev" command only
-	aldevCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "u", false,
-		"to use the local versions of the dependencies declared in the config file")
-	aldevCmd.Flags().BoolVarP(&disableGeneration, "disable-generation", "d", false, "disable the generation of all the config files, but not code generation")
+	aldevCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
+		"use swapping of code, to use the local version of some dependencies for instance")
+	aldevCmd.Flags().BoolVarP(&disableConfgen, "disable-confgen", "d", false, "disable the generation of all the config files")
 }
 
 // ----------------------------------------------------------------------------
@@ -90,8 +91,8 @@ func aldevRun(command *cobra.Command, args []string) {
 	ReadCommonArgsAndConfig()
 
 	// also valueing here, since the source of truth must lie in the utils package
-	if useLocalDeps {
-		utils.SetUseLocalDeps()
+	if swapCode {
+		utils.UseCodeSwaps()
 	}
 
 	// the main cancelable context, that should stop everything
@@ -103,8 +104,8 @@ func aldevRun(command *cobra.Command, args []string) {
 	go utils.InstallGitHooks(aldevCtx)
 
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
-	if useLocalDeps {
-		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev swap")
+	if swapCode {
+		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap")
 	}
 
 	// --- main loop stuff
@@ -194,7 +195,7 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 		// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
 
 		// Generating config files for deploying the app locally, CI / CD, etc.
-		if !disableGeneration {
+		if !disableConfgen {
 			utils.GenerateDeployConfigs(ctx)
 		}
 

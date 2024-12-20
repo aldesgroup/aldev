@@ -22,15 +22,14 @@ import (
 
 // aldevSwapCmd represents a subcommand
 var aldevSwapCmd = &cobra.Command{
-	Use:   "swap",
-	Short: "targets some configured file to swap some substrings inside",
-	Long: "This performs swaps of code in order to work locally more efficiently," +
-		"when other part of the stack fail to provide a 'local dev' mode",
+	Use:   "codeswap",
+	Short: "Swaps bit of code - like import paths - in targeted files",
+	Long: "This performs swaps of code in order, for example, to work locally more efficiently," +
+		" by allowing to replace paths to vendor libraries by paths to local git projects",
 	Run: aldevSwapRun,
 }
 
 var (
-	verbose        bool
 	folders        map[string]bool
 	done           map[string]bool
 	sets           []*swapSet
@@ -40,8 +39,6 @@ var (
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevSwapCmd)
-
-	// aldevSwapCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -66,13 +63,8 @@ func isFinished() bool {
 }
 
 func aldevSwapRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	// if verbose {
-	// 	utils.SetVerbose() // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO remove
-	// }
-
-	// reading the Aldev config one first time
-	// cfg := utils.ReadConfig(cmd.GetConfigFilename())
+	// Reading this command's arguments, and reading the aldev YAML config file
+	cmd.ReadCommonArgsAndConfig()
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(10, setFinished)
