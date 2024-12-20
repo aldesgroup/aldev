@@ -12,10 +12,11 @@ config.define_bool('api-only', usage='use this to only work with the API part of
 cfg = config.parse()
 useLocalDeps = cfg.get('use-local')
 apiOnly = cfg.get('api-only')
+devMode = "--api" if apiOnly else "--web"
 
 # describing the deployment of all the backend services, and their configuration
 if useLocalDeps or apiOnly:
-  # when working with local dependencies, or in API-only mode, we do not dockerise the web app
+  # when working with local dependencies, or in API-only mode, we do not dockerise the web part
   k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/local'))
 else:
   # when working with no use of local deps, the base config is enough
@@ -26,7 +27,7 @@ else:
 # building the API's code
 local_resource(
     name  ='{{.AppName}}-api-compile',
-    cmd   ='aldev complete',
+    cmd   ='aldev codegen '+devMode,
     # taking into account the dependencies
     deps  =['{{.API.SrcDir}}', '../goald', '../emerald'], # REMOVE EMERALD
     # the API config is also ignored here, because Aldev is already watching it
@@ -40,9 +41,9 @@ docker_build_with_restart(
   context    ='.',
   entrypoint =['/api/{{.AppName}}-api-local'],
   dockerfile ='{{.Deploying.Dir}}/docker/{{.AppName}}-local-api-docker',
-  only       =['./{{.GetResolvedBinDir}}', './{{.API.DataDir}}'],
+  only       =['./{{.ResolvedBinDir}}', './{{.API.DataDir}}'],
   live_update=[
-    sync('./{{.GetResolvedBinDir}}', '/api'),
+    sync('./{{.ResolvedBinDir}}', '/api'),
     sync('./{{.API.DataDir}}', '/api/data'),
   ],
 )

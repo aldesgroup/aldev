@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	devMode_ DevMode
+	devMode DevMode
 )
 
 func b2i(boolValue bool) int {
@@ -26,6 +26,18 @@ func b2i(boolValue bool) int {
 	return 0
 }
 
+var modeToString = map[DevMode]string{
+	DevModeAPI:    "--api",
+	DevModeLIB:    "--lib",
+	DevModeWEB:    "--web",
+	DevModeNATIVE: "--native",
+}
+
+// returns the current dev mode as a string
+func DevModeToString() string {
+	return modeToString[devMode]
+}
+
 func SetDevMode(api, lib, web, native bool) {
 	if b2i(api)+b2i(web)+b2i(lib)+b2i(native) != 1 {
 		Fatal(nil, "a UNIQUE dev mode must be provided: --api (-a), --lib (-l), --web (-w) or --native (-n); see the help (aldev -h)")
@@ -33,22 +45,22 @@ func SetDevMode(api, lib, web, native bool) {
 
 	switch {
 	case api:
-		devMode_ = DevModeAPI
+		devMode = DevModeAPI
 	case lib:
-		devMode_ = DevModeLIB
+		devMode = DevModeLIB
 	case web:
-		devMode_ = DevModeWEB
+		devMode = DevModeWEB
 	case native:
-		devMode_ = DevModeNATIVE
+		devMode = DevModeNATIVE
 	}
 }
 
 func getDevMode() DevMode {
-	if devMode_ == DevModeUNDEFINED {
+	if devMode == DevModeUNDEFINED {
 		Fatal(nil, "Development mode is undefined!")
 	}
 
-	return devMode_
+	return devMode
 }
 
 func IsDevWeb() bool {

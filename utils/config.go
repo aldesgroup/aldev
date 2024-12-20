@@ -113,22 +113,6 @@ func GetConfigPath() string {
 	return Config().API.Config
 }
 
-func GetResolvedBinDir() string {
-	if IsDevLibrary() {
-		if Config().Lib.resolvedBinDir == "" {
-			Config().Lib.resolvedBinDir = path.Join(Config().Lib.SrcDir, Config().Lib.BinDir)
-		}
-
-		return Config().Lib.resolvedBinDir
-	}
-
-	if Config().API.resolvedBinDir == "" {
-		Config().API.resolvedBinDir = path.Join(Config().API.SrcDir, Config().API.BinDir)
-	}
-
-	return Config().API.resolvedBinDir
-}
-
 func ReadConfig(cfgFileName string) {
 	Debug("Reading Aldev config")
 
@@ -153,4 +137,21 @@ func ReadConfig(cfgFileName string) {
 			Value: config.Languages,
 		})
 	}
+}
+
+// computed property on an Aldev config object
+func (cfg *AldevConfig) ResolvedBinDir() string {
+	if IsDevLibrary() {
+		if cfg.Lib.resolvedBinDir == "" {
+			cfg.Lib.resolvedBinDir = path.Join(cfg.Lib.SrcDir, cfg.Lib.BinDir)
+		}
+
+		return cfg.Lib.resolvedBinDir
+	}
+
+	if cfg.API.resolvedBinDir == "" {
+		cfg.API.resolvedBinDir = path.Join(cfg.API.SrcDir, cfg.API.BinDir)
+	}
+
+	return cfg.API.resolvedBinDir
 }

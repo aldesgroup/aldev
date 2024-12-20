@@ -30,3 +30,9 @@ func jsonAsStruct[T any](url string, obj T) T {
 	FatalIfErr(nil, json.Unmarshal(getJSON(url), obj))
 	return obj
 }
+
+func structAsJSON(obj any) string {
+	jsonBytes, errMarshal := json.MarshalIndent(obj, "", "  ")
+	FatalIfErr(nil, errMarshal)
+	return string(jsonBytes)
+}

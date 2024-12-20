@@ -65,7 +65,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 
 	// repeated commands
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", utils.GetBinDir(), utils.Config().AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", utils.GetResolvedBinDir(), utils.Config().AppName,
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", utils.Config().ResolvedBinDir(), utils.Config().AppName,
 		path.Join(utils.GetSrcDir(), utils.GetConfigPath()), utils.GetSrcDir())
 	if utils.Config().Web != nil {
 		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)

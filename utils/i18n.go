@@ -39,7 +39,7 @@ func downloadAllTranslationsFromGoogle(ctx CancelableContext) {
 	// if there's an API, we need translations for it
 	if IsDevAPI() && Config().API != nil {
 		downloadTranslationForApp(ctx, Config().API.I18n, Config().API.DataDir)
-	}
+	} //
 
 	// if there's a native app, we need translations for it
 	if IsDevNative() && Config().Native != nil {
@@ -52,6 +52,7 @@ func downloadTranslationForApp(ctx CancelableContext, i18nCfg *I18nConfig, destD
 	if i18nCfg == nil || len(i18nCfg.Links) == 0 {
 		Error("Empty or incomplete i18n configuration!")
 		ctx.CancelAll()
+		return
 	}
 
 	// tracking the time spent here
@@ -96,12 +97,17 @@ func downloadTranslationForApp(ctx CancelableContext, i18nCfg *I18nConfig, destD
 			}
 
 			// adding to the output
-			translations[translation.Key] = translation
+			translations[translation.Namespace+translation.Key] = translation
 		}
 	}
 
 	// initialising the output object
 	output := []*translation{}
+
+	// pouring the translations we've gathered so far into the output
+	for _, translationObj := range translations {
+		output = append(output, translationObj)
+	}
 
 	// sorting the output
 	sort.Slice(output, func(i, j int) bool {

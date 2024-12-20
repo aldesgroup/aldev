@@ -105,7 +105,7 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
 	if swapCode {
-		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap")
+		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap %s", utils.DevModeToString())
 	}
 
 	// --- main loop stuff
