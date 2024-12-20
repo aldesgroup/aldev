@@ -16,13 +16,11 @@ var (
 	verbose bool
 )
 
-func SetVerbose() {
-	verbose = true
-	slog.SetLogLoggerLevel(slog.LevelDebug)
-}
-
-func Noop(str string, params ...any) {
-	// does nothing
+func SetVerbose(isVerbose bool) {
+	verbose = isVerbose
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
 }
 
 func Debug(str string, params ...any) {
@@ -69,7 +67,7 @@ func Error(str string, params ...any) {
 
 func Fatal(ctx CancelableContext, str string, params ...any) {
 	Error(str, params...)
-	Info(string(debug.Stack()))
+	Info("Stack: %s", string(debug.Stack()))
 	if ctx != nil {
 		ctx.CancelAll()
 	}

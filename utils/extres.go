@@ -11,9 +11,9 @@ import (
 const AldevCacheDirENVVAR = "ALDEV_CACHEDIR"
 
 // Downloading external resources, like translations, vendors, etc
-func DownloadExternalResources(ctx CancelableContext, cfg *AldevConfig) {
+func DownloadExternalResources(ctx CancelableContext) {
 	// making sure the cache folder exists if we need it
-	if len(cfg.Vendors) > 0 {
+	if len(Config().Vendors) > 0 {
 		if os.Getenv(AldevCacheDirENVVAR) == "" {
 			Fatal(ctx, "The cache directory cannot be empty; Env var '%s' should be set (to '../tmp' for instance)", AldevCacheDirENVVAR)
 		}
@@ -25,10 +25,10 @@ func DownloadExternalResources(ctx CancelableContext, cfg *AldevConfig) {
 	wg := new(sync.WaitGroup)
 
 	// proceed to download external resources
-	goRoutine(wg, downloadTranslationsFromGoogle, ctx, cfg)
+	goRoutine(wg, downloadAllTranslationsFromGoogle, ctx)
 
 	// proceed to download external resources
-	goRoutine(wg, fetchVendoredLibraries, ctx, cfg)
+	goRoutine(wg, fetchVendoredLibraries, ctx)
 
 	// waiting here for all the tasks to be finished
 	wg.Wait()

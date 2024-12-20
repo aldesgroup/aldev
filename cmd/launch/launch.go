@@ -28,8 +28,8 @@ func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevLaunchCmd)
 	aldevLaunchCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
-	aldevLaunchCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "l", false,
-		"to use the local dependencies declared in the config file")
+	aldevLaunchCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "u", false,
+		"to use the local versions of the dependencies declared in the config file")
 }
 
 // ----------------------------------------------------------------------------
@@ -37,21 +37,16 @@ func init() {
 // ----------------------------------------------------------------------------
 
 func aldevLaunchRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
+	// Reading this command's arguments, and reading the aldev YAML config file
+	cmd.ReadCommonArgsAndConfig()
 
 	if useLocalDeps {
 		utils.SetUseLocalDeps()
 	}
 
-	// reading the Aldev config one first time
-	cfg := utils.ReadConfig(cmd.GetConfigFilename())
-
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(100, nil)
 
 	// launching!
-	utils.Launch(aldevCtx, cfg)
+	utils.DeployToLocalCluster(aldevCtx)
 }

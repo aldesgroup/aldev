@@ -22,7 +22,7 @@ const aldevINITxREPO = "ALDEV_INITREPO"
 // aldevInitCmd represents a subcommand
 var aldevInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initiates a new aldev projects",
+	Short: "Initiates a new aldev project",
 	Long: "Depends on an environment variable " + aldevINITxREPO + ", that should point to a git-clonable project " +
 		"containing a kind of template for aldev projects, i.e. a project with a very generic aldev config file " +
 		"(.aldev.yaml), a bit of API & web app code, that should work out of the box with the 'aldev' command. " +
@@ -50,10 +50,8 @@ func init() {
 // ----------------------------------------------------------------------------
 
 func aldevInitRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
+	// handling the verbosity
+	utils.SetVerbose(verbose)
 
 	// checking the name
 	if projectName == "" || strings.Contains(projectName, " ") || strings.Contains(projectName, "_") {
@@ -65,7 +63,7 @@ func aldevInitRun(command *cobra.Command, args []string) {
 		utils.Fatal(nil, "Cannot run this from an actual Git project")
 	}
 
-	// LFG
+	// LFG!s
 	start := time.Now()
 
 	// checking the environment
@@ -86,6 +84,7 @@ func aldevInitRun(command *cobra.Command, args []string) {
 
 	// git-cloning into the cache the template project
 	firstSlashIndex := strings.Index(initURL, "/")
+	// TODO handle public repos
 	utils.Run("git-cloning / caching the '"+initURL+"' repo", ctx, false,
 		"git clone git@%s:%s.git %s", initURL[:firstSlashIndex], initURL[firstSlashIndex+1:], projectName)
 
@@ -118,7 +117,7 @@ func aldevInitRun(command *cobra.Command, args []string) {
 	// TODO make it more customizable
 	newProjCtx := ctx.WithExecDir(projectName)
 	utils.Run("initializing Git", newProjCtx, false, "git init")
-	utils.EnsureFileFromTemplate(nil, path.Join(projectName, ".gitignore"), templates.GitIgnore)
+	utils.EnsureFileFromTemplate(path.Join(projectName, ".gitignore"), templates.GitIgnore)
 	utils.Run("adding the files", newProjCtx, false, "git add .")
 	utils.Run("committing the files", newProjCtx, false, "git commit -m \"dev: new aldev project\"") // TODO this fails for now
 	utils.Run("pushing the first commit", newProjCtx, false,

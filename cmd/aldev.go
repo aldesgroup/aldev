@@ -34,26 +34,34 @@ func Execute() {
 // aldevCmd represents the base command when called without any subcommands
 var aldevCmd = &cobra.Command{
 	Use:   "aldev",
-	Short: "Quick dev with Goald, GoaldR & Kubernetes",
-	Long: "Run Aldev to start or continue developing a Goald / GoaldR application " +
-		"with automatic deployment in a local k8s cluster and live reloading.",
+	Short: "Quick dev with Goald, GoaldR and / GoaldN, & Docker / Kubernetes",
+	Long: "Run Aldev to start or continue developing a Goald / GoaldR or GoaldN application " +
+		"with automatic deployment in a local k8s cluster and live reloading (when applicable).",
 	Run: aldevRun,
 }
 
 var (
 	// flags
-	cfgFileName       string
-	verbose           bool
-	useLocalDeps      bool
-	disableGeneration bool
+	cfgFileName           string
+	verbose               bool
+	useLocalDeps          bool
+	disableGeneration     bool
+	api, lib, web, native bool // the 4 aldev modes, one and only one must be true at a time
 )
 
 func init() {
+	// common arguments, for the "aldev" command for also all its subcommands
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
-	aldevCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "l", false,
-		"to use the local dependencies declared in the config file")
-	aldevCmd.PersistentFlags().BoolVarP(&disableGeneration, "disable-generation", "d", false, "disable the generation of all the config files, but not code generation")
+	aldevCmd.PersistentFlags().BoolVarP(&api, "api", "a", false, "when developing a pure API (Linux)")
+	aldevCmd.PersistentFlags().BoolVarP(&lib, "lib", "l", false, "when developing a library (Linux)")
+	aldevCmd.PersistentFlags().BoolVarP(&web, "web", "w", false, "when developing a webapp, along with its API (Linux)")
+	aldevCmd.PersistentFlags().BoolVarP(&native, "native", "n", false, "when developing a native app (Windows)")
+
+	// arguments for the "aldev" command only
+	aldevCmd.Flags().BoolVarP(&useLocalDeps, "use-local-deps", "u", false,
+		"to use the local versions of the dependencies declared in the config file")
+	aldevCmd.Flags().BoolVarP(&disableGeneration, "disable-generation", "d", false, "disable the generation of all the config files, but not code generation")
 }
 
 // ----------------------------------------------------------------------------
@@ -64,8 +72,12 @@ func GetAldevCmd() *cobra.Command {
 	return aldevCmd
 }
 
-func GetConfigFilename() string {
-	return cfgFileName
+// Function that processes the common arguments to all the aldev command & subcommands
+// and reads the content of the YAML aldev config file into a variable
+func ReadCommonArgsAndConfig() {
+	utils.SetVerbose(verbose)
+	utils.SetDevMode(api, lib, web, native)
+	utils.ReadConfig(cfgFileName)
 }
 
 // ----------------------------------------------------------------------------
@@ -74,18 +86,13 @@ func GetConfigFilename() string {
 // ----------------------------------------------------------------------------
 
 func aldevRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
+	// Reading this command's arguments, and reading the aldev YAML config file
+	ReadCommonArgsAndConfig()
 
 	// also valueing here, since the source of truth must lie in the utils package
 	if useLocalDeps {
 		utils.SetUseLocalDeps()
 	}
-
-	// reading the Aldev config one first time
-	cfg := utils.ReadConfig(cfgFileName)
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(2000, nil)
@@ -93,7 +100,7 @@ func aldevRun(command *cobra.Command, args []string) {
 	// --- one-time stuff
 
 	// one time thing: install the pre-commit hook
-	go utils.InstallGitHooks(aldevCtx, cfg)
+	go utils.InstallGitHooks(aldevCtx)
 
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
 	if useLocalDeps {
@@ -104,8 +111,8 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// for which file changes are we going to restart the main loop?
 	watched := []string{cfgFileName} // Aldev's config
-	if cfg.API != nil {
-		watched = append(watched, path.Join(cfg.GetSrcDir(), cfg.GetConfigPath())) // the API or lib's config
+	if utils.Config().API != nil {
+		watched = append(watched, path.Join(utils.GetSrcDir(), utils.GetConfigPath())) // the API or lib's config
 	}
 
 	// adding a watcher to detect some file changes
@@ -170,27 +177,32 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	defer utils.Recover(ctx, "building & deploying the app")
 
 	// reading the Aldev config again, in case it has changed
-	cfg := utils.ReadConfig(cfgFileName)
+	utils.ReadConfig(cfgFileName)
 
 	// proceed to download the needed external resources
-	utils.DownloadExternalResources(ctx, cfg)
+	utils.DownloadExternalResources(ctx)
 
 	// in library mode, there no need for k8s, deployments, env vars, etc.
-	if cfg.IsLibrary() {
-		utils.QuickRun("Installing / refreshing the dev environment", cfg.Lib.Install)
-		utils.Run("Developing the lib", ctx, true, cfg.Lib.Develop)
+	if utils.IsDevLibrary() {
+		utils.QuickRun("Installing / refreshing the dev environment", utils.Config().Lib.Install)
+		utils.Run("Developing the lib", ctx, true, utils.Config().Lib.Develop)
 
 		// Wait for the context to be canceled or the program to exit
 		<-ctx.Done()
 
-	} else {
+	} else if utils.IsDevAPI() {
+		// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
 
 		// Generating config files for deploying the app locally, CI / CD, etc.
 		if !disableGeneration {
-			utils.GenerateConfigs(cfg)
+			utils.GenerateDeployConfigs(ctx)
 		}
 
 		// Ready for launch
-		utils.Launch(ctx, cfg)
+		utils.DeployToLocalCluster(ctx)
+
+	} else if utils.IsDevNative() {
+		// we're doing native dev, and that's new (for now)
+		utils.Fatal(ctx, "Not implemented yet")
 	}
 }

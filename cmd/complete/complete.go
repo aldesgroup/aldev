@@ -26,7 +26,6 @@ var aldevCompleteCmd = &cobra.Command{
 var (
 	compilationOnly bool
 	regen           bool
-	verbose         bool
 )
 
 func init() {
@@ -35,7 +34,6 @@ func init() {
 
 	aldevCompleteCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
 	aldevCompleteCmd.Flags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration")
-	aldevCompleteCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -44,33 +42,33 @@ func init() {
 
 // TODO handle compilation errors = rollbacks on previous situation
 func aldevCompleteRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
-
 	start := time.Now()
 
-	// reading the Aldev config one first time
-	cfg := utils.ReadConfig(cmd.GetConfigFilename())
+	// Reading this command's arguments, and reading the aldev YAML config file
+	cmd.ReadCommonArgsAndConfig()
+
+	// Controlling we're not using this in native dev
+	if utils.IsDevNative() {
+		utils.Fatal(nil, "This is not available for native development")
+	}
 
 	// the context to build Go sources
-	completeCtx := utils.InitAldevContext(100, nil).WithExecDir(cfg.GetSrcDir())
+	completeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetSrcDir())
 
 	// making sure we're applying what's decided in the go.mod file
 	utils.Run("Making sure we're using the right set of dependencies", completeCtx, false, "go mod tidy")
 
 	// control
-	if cfg.GetBinDir() == "" {
+	if utils.GetBinDir() == "" {
 		utils.Fatal(nil, "Aldev config item `.api.bindir` (relative path for the temp folder)  or `.lib.bindir` (if library) is empty!")
 	}
 
 	// repeated commands
-	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", cfg.GetBinDir(), cfg.AppName)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", cfg.GetResolvedBinDir(), cfg.AppName,
-		path.Join(cfg.GetSrcDir(), cfg.GetConfigPath()), cfg.GetSrcDir())
-	if cfg.Web != nil {
-		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, cfg.Web.SrcDir)
+	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", utils.GetBinDir(), utils.Config().AppName)
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local -config %s -srcdir %s", utils.GetResolvedBinDir(), utils.Config().AppName,
+		path.Join(utils.GetSrcDir(), utils.GetConfigPath()), utils.GetSrcDir())
+	if utils.Config().Web != nil {
+		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
 	}
 
 	// compilation n°1 - this is needed to have the run command up-to-date
@@ -98,16 +96,16 @@ func aldevCompleteRun(command *cobra.Command, args []string) {
 	utils.Run("Does it still compile after codegen step 2?", completeCtx, false, mainCompileCmd)
 
 	// generation step n°3
-	utils.QuickRun("Generating stuff: BO utils...", mainRunCmd+" -codegen 3"+regenArg)
+	utils.QuickRun("Generating stuff: BO vmaps, BO web models, etc...", mainRunCmd+" -codegen 3"+regenArg)
 
 	// compilation n°4
 	utils.Run("Does it still compile after codegen step 3?", completeCtx, false, mainCompileCmd)
 
 	// formatting
-	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(cfg.GetSrcDir(), "_include"), path.Join(cfg.GetSrcDir(), "main"))
+	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(utils.GetSrcDir(), "_include"), path.Join(utils.GetSrcDir(), "main"))
 
 	// migrating the DBs if needed
-	if !cfg.IsLibrary() {
+	if !utils.IsDevLibrary() {
 		utils.QuickRun("DB automigration", mainRunCmd+" -migrate")
 	}
 

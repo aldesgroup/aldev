@@ -41,7 +41,7 @@ func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevSwapCmd)
 
-	aldevSwapCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
+	// aldevSwapCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -67,21 +67,21 @@ func isFinished() bool {
 
 func aldevSwapRun(command *cobra.Command, args []string) {
 	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
+	// if verbose {
+	// 	utils.SetVerbose() // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO remove
+	// }
 
 	// reading the Aldev config one first time
-	cfg := utils.ReadConfig(cmd.GetConfigFilename())
+	// cfg := utils.ReadConfig(cmd.GetConfigFilename())
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(10, setFinished)
 
 	// which files are going to be impacted?
-	sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx, cfg)
+	sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx)
 
 	// performing the initial swaps
-	doAllTheSwaps(aldevCtx, cfg, false, true)
+	doAllTheSwaps(aldevCtx, false, true)
 
 	// adding a watcher to detect some file changes, for additional needed swaps
 	watcher := utils.WatcherFor(watchedFolders...)
@@ -95,7 +95,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 		time.Sleep(10 * time.Millisecond)
 
 		// performing the swaps, in reverse
-		doAllTheSwaps(aldevCtx, cfg, true, true)
+		doAllTheSwaps(aldevCtx, true, true)
 	}()
 
 	// watching all the files here and rebooting the watching if something is changed
@@ -119,7 +119,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 						cache.SetDefault(event.String(), true)
 
 						// which files are going to be impacted NOW?
-						sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx, cfg)
+						sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx)
 
 						// adding a watcher to detect some file changes
 						utils.FatalIfErr(aldevCtx, watcher.Close()) // closing the old one
@@ -129,7 +129,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 						time.Sleep(200 * time.Millisecond)
 
 						// performing the swaps on the newly computed sets
-						doAllTheSwaps(aldevCtx, cfg, false, false)
+						doAllTheSwaps(aldevCtx, false, false)
 					}
 				}
 
@@ -143,7 +143,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	<-aldevCtx.Done()
 }
 
-func doAllTheSwaps(ctx utils.CancelableContext, cfg *utils.AldevConfig, rollback bool, startOrFinish bool) {
+func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish bool) {
 	// we're not allowing forward swaps if we're finished, only rollbacks
 	if isFinished() && !rollback {
 		return
@@ -169,7 +169,7 @@ func doAllTheSwaps(ctx utils.CancelableContext, cfg *utils.AldevConfig, rollback
 	time.Sleep(50 * time.Millisecond)
 
 	// syncing the Go.sum file with the swaps done
-	goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(cfg.GetSrcDir())
+	goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetSrcDir())
 	utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
 }
 
@@ -180,11 +180,11 @@ type swapSet struct {
 }
 
 // builds all the sets for all the swap configs configured
-func getWatchedFilesAndFolders(ctx utils.CancelableContext, cfg *utils.AldevConfig) (sets []*swapSet, watchedFolders []string) {
+func getWatchedFilesAndFolders(ctx utils.CancelableContext) (sets []*swapSet, watchedFolders []string) {
 	folders = map[string]bool{}
 	done = map[string]bool{}
 
-	for _, swapConf := range cfg.LocalSwaps {
+	for _, swapConf := range utils.Config().LocalSwaps {
 		sets = append(sets, (&swapSet{swapConf: swapConf}).buildFrom(ctx, swapConf.From))
 	}
 

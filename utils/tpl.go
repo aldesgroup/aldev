@@ -9,7 +9,7 @@ import (
 	"text/template"
 )
 
-func EnsureFileFromTemplate(cfg *AldevConfig, filepath, tpl string, params ...any) {
+func EnsureFileFromTemplate(filepath, tpl string, params ...any) {
 	Debug("Making sure this file exists: %s", filepath)
 
 	content := tpl
@@ -27,5 +27,5 @@ func EnsureFileFromTemplate(cfg *AldevConfig, filepath, tpl string, params ...an
 	defer outputFile.Close()
 
 	// Execute the template with the data
-	FatalIfErr(nil, tmpl.Execute(outputFile, cfg))
+	FatalIfErr(nil, tmpl.Execute(outputFile, Config()))
 }

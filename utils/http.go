@@ -26,6 +26,7 @@ func getJSON(url string) []byte {
 }
 
 // getting JSON and unmarshaling it right away into a given object
-func jsonAsStruct(url string, obj any) {
+func jsonAsStruct[T any](url string, obj T) T {
 	FatalIfErr(nil, json.Unmarshal(getJSON(url), obj))
+	return obj
 }

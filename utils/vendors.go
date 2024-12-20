@@ -18,7 +18,7 @@ const (
 )
 
 // Fetching the required vendored libraries
-func fetchVendoredLibraries(ctx CancelableContext, cfg *AldevConfig) {
+func fetchVendoredLibraries(ctx CancelableContext) {
 	// making sure we recover any big crashing error
 	defer Recover(ctx, "fetching / refreshing the vendors")
 
@@ -33,7 +33,7 @@ func fetchVendoredLibraries(ctx CancelableContext, cfg *AldevConfig) {
 
 	// fetching / refreshing all the vendors in parallel
 	wg := new(sync.WaitGroup)
-	for _, vendor := range cfg.Vendors {
+	for _, vendor := range Config().Vendors {
 		wg.Add(1)
 		go func(v *VendorConfig) {
 			defer wg.Done()
@@ -125,7 +125,11 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 		FatalIfErr(ctx, os.RemoveAll(path.Join(vendor.To, repoName)))
 
 		// copying the new vendor code + version file
-		QuickRun("Copying this repo into project: "+repoName, "cp -r %s/%s/. %s", repoPath, vendor.From, vendorDir)
+		copyCommand := "cp -r"
+		if IsWindows() {
+			copyCommand = "powershell -Command Copy-Item -Recurse"
+		}
+		QuickRun("Copying this repo into project: "+repoName, "%s %s/%s/. %s", copyCommand, repoPath, vendor.From, vendorDir)
 		WriteJsonObjToFile(ctx, versionFileName, nextVersion)
 
 		// bit of logging

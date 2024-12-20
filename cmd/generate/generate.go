@@ -13,24 +13,18 @@ import (
 // aldevGenerateCmd represents a subcommand
 var aldevGenerateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Downloads the Aldev environment's required external resources",
-	Long: "This downloads the required external resources in their latest version, " +
-		"like the i18n file with up-to-date translations, or some required dependencies.",
-	Run: aldevGenerateRun,
+	Short: "Generates config files, used notably for local & remote deployment",
+	Long:  "Generates the Tiltfile, Docker & Kustomization files, and an .env-list for web app development",
+	Run:   aldevGenerateRun,
 }
 
 var (
-	// cfgFileName  string
-	verbose bool
-
-// useLocalDeps bool
-// options      string
+// no specific argument for now
 )
 
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevGenerateCmd)
-	aldevGenerateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -38,14 +32,9 @@ func init() {
 // ----------------------------------------------------------------------------
 
 func aldevGenerateRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
-
-	// reading the Aldev config one first time
-	cfg := utils.ReadConfig(cmd.GetConfigFilename())
+	// Reading this command's arguments, and reading the aldev YAML config file
+	cmd.ReadCommonArgsAndConfig()
 
 	// downloading various external resource in parallel
-	utils.GenerateConfigs(cfg)
+	utils.GenerateDeployConfigs(nil)
 }

@@ -10,10 +10,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	// the instance bearing all the configuration
+	config *AldevConfig
+)
+
+func Config() *AldevConfig {
+	if config == nil {
+		Fatal(nil, "Aldev configuration has never been read!")
+	}
+
+	return config
+}
+
 type AldevConfig struct {
 	AppName   string    // the name of the app - beware: the key has to be "appname" in the YAML file
 	Languages string    // the languages available for this app, seperated by a comma - for example: en,fr,it,de,zh,es
-	Lib       *struct { // if this section's non-empty, then this project is not an app but a library, and section "API", "Web", "Deploying" are discarded
+	Lib       *struct { // must be filled if this project is a library
 		SrcDir         string // where the library source code can be found
 		Config         string // the path to the config file for the API, from the API's folder
 		Install        string // command that should be run to install stuff, like needed dependencies, etc.
@@ -21,21 +34,17 @@ type AldevConfig struct {
 		BinDir         string // the directory where to find the library's compiled binary, as seen from the library source folder (srcdir)
 		resolvedBinDir string // the bin directory as seen from the project's root
 	}
-	API *struct {
-		SrcDir string // where the API's Goald-based code should be found
-		Config string // the path to the config file for the API, from the API's folder
-		Port   int    // the port used to expose the whole load-balanced API service
-		I18n   *struct {
-			Link    string // the link to download the translations for the current app
-			KeySize int    // the max size of the key in the translation UID route.part.key
-			File    string // the path of the file where to write the downloaded translations
-		}
+	API *struct { // must be filled if there's an API
+		SrcDir         string // where the API's Goald-based code should be found
+		Config         string // the path to the config file for the API, from the API's folder
+		Port           int    // the port used to expose the whole load-balanced API service
+		I18n           *I18nConfig
 		DataDir        string // where to find bootstraping data to run the app
 		BinDir         string // the directory where to find the API's compiled binary, as seen from the API source folder (srcdir)
 		resolvedBinDir string // the bin directory as seen from the project's root
 	}
-	APIOnly bool // if true, then no web app is handled
-	Web     *struct {
+	// APIOnly bool      // if true, then no web app is handled
+	Web *struct { // must be filled if there's a web app
 		SrcDir  string      // where the Web app's GoaldR-based code should be found
 		Port    int         // the port used to expose the app's frontend
 		EnvVars []*struct { // environment variables to pass to the web app
@@ -43,6 +52,12 @@ type AldevConfig struct {
 			Desc  string // a description for the
 			Value string // the value we're using for the local dev environment
 		}
+	}
+	Native *struct { // must be filled if there's a native app
+		SrcDir  string // where the Native app's GoaldN-based code should be found
+		I18n    *I18nConfig
+		DataDir string // where to find bootstraping data to run the app
+
 	}
 	Vendors   []*VendorConfig // external projects to vendor into our project
 	Deploying *struct {       // Section for the local deployment of the app
@@ -68,74 +83,74 @@ type VendorConfig struct {
 	To      string // the place where to paste the copied cod
 }
 
-func (thisCfg *AldevConfig) IsLibrary() bool {
-	return thisCfg.Lib != nil
+type I18nConfig struct {
+	Links   []string // the link to download the translations from; each new file can override previous translations
+	KeySize int      // the max size of the key in the translation UID namespace.key
+	File    string   // the path of the file where to write the downloaded translations
 }
 
-func (thisCfg *AldevConfig) GetSrcDir() string {
-	if thisCfg.IsLibrary() {
-		return thisCfg.Lib.SrcDir
+func GetSrcDir() string {
+	if IsDevLibrary() {
+		return Config().Lib.SrcDir
 	}
 
-	return thisCfg.API.SrcDir
+	return Config().API.SrcDir
 }
 
-func (thisCfg *AldevConfig) GetBinDir() string {
-	if thisCfg.IsLibrary() {
-		return thisCfg.Lib.BinDir
+func GetBinDir() string {
+	if IsDevLibrary() {
+		return Config().Lib.BinDir
 	}
 
-	return thisCfg.API.BinDir
+	return Config().API.BinDir
 }
 
-func (thisCfg *AldevConfig) GetConfigPath() string {
-	if thisCfg.IsLibrary() {
-		return thisCfg.Lib.Config
+func GetConfigPath() string {
+	if IsDevLibrary() {
+		return Config().Lib.Config
 	}
 
-	return thisCfg.API.Config
+	return Config().API.Config
 }
 
-func (thisCfg *AldevConfig) GetResolvedBinDir() string {
-	if thisCfg.IsLibrary() {
-		if thisCfg.Lib.resolvedBinDir == "" {
-			thisCfg.Lib.resolvedBinDir = path.Join(thisCfg.Lib.SrcDir, thisCfg.Lib.BinDir)
+func GetResolvedBinDir() string {
+	if IsDevLibrary() {
+		if Config().Lib.resolvedBinDir == "" {
+			Config().Lib.resolvedBinDir = path.Join(Config().Lib.SrcDir, Config().Lib.BinDir)
 		}
 
-		return thisCfg.Lib.resolvedBinDir
+		return Config().Lib.resolvedBinDir
 	}
 
-	if thisCfg.API.resolvedBinDir == "" {
-		thisCfg.API.resolvedBinDir = path.Join(thisCfg.API.SrcDir, thisCfg.API.BinDir)
+	if Config().API.resolvedBinDir == "" {
+		Config().API.resolvedBinDir = path.Join(Config().API.SrcDir, Config().API.BinDir)
 	}
 
-	return thisCfg.API.resolvedBinDir
+	return Config().API.resolvedBinDir
 }
 
-func ReadConfig(cfgFileName string) *AldevConfig {
+func ReadConfig(cfgFileName string) {
 	Debug("Reading Aldev config")
 
-	cfg := &AldevConfig{}
+	config = &AldevConfig{}
 
 	// Reading the config file into bytes
 	yamlBytes, errRead := os.ReadFile(cfgFileName)
 	FatalIfErr(nil, errRead)
 
 	// Unmarshalling the YAML file
-	FatalIfErr(nil, yaml.Unmarshal(yamlBytes, cfg))
+	FatalIfErr(nil, yaml.Unmarshal(yamlBytes, config))
 
 	// Adding the languages to the env vars for the web
-	if cfg.Web != nil {
-		cfg.Web.EnvVars = append(cfg.Web.EnvVars, &struct {
+	if config.Web != nil {
+		config.Web.EnvVars = append(config.Web.EnvVars, &struct {
 			Name  string
 			Desc  string
 			Value string
 		}{
 			Name:  "WEB_LANGUAGES",
 			Desc:  "the languages that should be available in the web app",
-			Value: cfg.Languages,
+			Value: config.Languages,
 		})
 	}
-
-	return cfg
 }

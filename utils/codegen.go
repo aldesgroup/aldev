@@ -12,43 +12,47 @@ import (
 	"github.com/aldesgroup/aldev/templates"
 )
 
-func GenerateConfigs(cfg *AldevConfig) {
+func GenerateDeployConfigs(ctx CancelableContext) {
+	if !IsLinux() {
+		Fatal(ctx, "This mode is not supported in non-Linux environments (yet)")
+	}
+
 	// making sure the config map is here and up-to-date
-	EnsureConfigmap(cfg)
+	EnsureConfigmap()
 
 	// making sure some needed files are here: base local deployment
-	baseDir := EnsureDir(nil, cfg.Deploying.Dir, "base")
-	EnsureFileFromTemplate(cfg, path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
-	EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-.yaml"), templates.API)
-	EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-api-lb.yaml"), templates.LB)
-	EnsureFileFromTemplate(cfg, path.Join(baseDir, cfg.AppName+"-web.yaml"), templates.Web)
+	baseDir := EnsureDir(nil, Config().Deploying.Dir, "base")
+	EnsureFileFromTemplate(path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
+	EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-api-.yaml"), templates.API)
+	EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-api-lb.yaml"), templates.LB)
+	EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-web.yaml"), templates.Web)
 
 	// docker files
-	dockerDir := EnsureDir(nil, cfg.Deploying.Dir, "docker")
-	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-api-docker"), templates.DockerLocalAPI)
-	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-local-web-docker"), templates.DockerLocalWEB)
-	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
-	EnsureFileFromTemplate(cfg, path.Join(dockerDir, cfg.AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
+	dockerDir := EnsureDir(nil, Config().Deploying.Dir, "docker")
+	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-api-docker"), templates.DockerLocalAPI)
+	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-web-docker"), templates.DockerLocalWEB)
+	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
+	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
 
 	// adding overlays
-	overlaysDir := EnsureDir(nil, cfg.Deploying.Dir, "overlays")
-	addOverlay(cfg, overlaysDir, "dev", nil)
-	addOverlay(cfg, overlaysDir, "local", [][]string{
+	overlaysDir := EnsureDir(nil, Config().Deploying.Dir, "overlays")
+	addOverlay(overlaysDir, "dev", nil)
+	addOverlay(overlaysDir, "local", [][]string{
 		{"patch-no-web-container.yaml", templates.NoWebContainerPatch},
 	})
-	addOverlay(cfg, overlaysDir, "sandbox", nil)
-	addOverlay(cfg, overlaysDir, "staging", nil)
-	addOverlay(cfg, overlaysDir, "production", nil)
+	addOverlay(overlaysDir, "sandbox", nil)
+	addOverlay(overlaysDir, "staging", nil)
+	addOverlay(overlaysDir, "production", nil)
 
 	// deployment with Gitlab
-	// EnsureFileFromTemplate(cfg, ".gitlab-ci.yml", templates.GitlabCI)
+	// EnsureFileFromTemplate(".gitlab-ci.yml", templates.GitlabCI)
 
 	// last but not least, the Tiltfile
-	EnsureFileFromTemplate(cfg, "Tiltfile", templates.Tiltfile)
+	EnsureFileFromTemplate("Tiltfile", templates.Tiltfile)
 
 	// list of env vars for the web app
-	if !cfg.APIOnly {
-		EnsureFileFromTemplate(cfg, path.Join(cfg.Web.SrcDir, ".env-list"), templates.WebEnvList)
+	if IsDevWeb() {
+		EnsureFileFromTemplate(path.Join(Config().Web.SrcDir, ".env-list"), templates.WebEnvList)
 	}
 }
 
@@ -58,7 +62,7 @@ func GenerateConfigs(cfg *AldevConfig) {
 
 // adding an overlay with its name; each patch should be at least: [0]: the filename, [1]: the template;
 // [2], [3], etc, are string format parameters to fill the "%s" placeholders in the template.
-func addOverlay(cfg *AldevConfig, overlaysDir, overlayName string, patches [][]string) {
+func addOverlay(overlaysDir, overlayName string, patches [][]string) {
 	overlay := EnsureDir(nil, overlaysDir, overlayName)
 
 	// handling the patches at first
@@ -79,13 +83,13 @@ func addOverlay(cfg *AldevConfig, overlaysDir, overlayName string, patches [][]s
 			for i := 2; i < len(patch); i++ {
 				templateParams = append(templateParams, patch[i])
 			}
-			EnsureFileFromTemplate(cfg, path.Join(overlay, filename), template, templateParams...)
+			EnsureFileFromTemplate(path.Join(overlay, filename), template, templateParams...)
 		}
 	}
 
 	// writing out the kustomization file, with its namespace resource
-	EnsureFileFromTemplate(cfg, path.Join(overlay, "kustomization.yaml"),
+	EnsureFileFromTemplate(path.Join(overlay, "kustomization.yaml"),
 		templates.KustomizationOverlay+kustomizationPatches, overlayName, overlayName)
-	EnsureFileFromTemplate(cfg, path.Join(overlay, fmt.Sprintf("namespace-%s.yaml", overlayName)),
+	EnsureFileFromTemplate(path.Join(overlay, fmt.Sprintf("namespace-%s.yaml", overlayName)),
 		templates.NewNamespace, overlayName)
 }

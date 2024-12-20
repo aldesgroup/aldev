@@ -20,17 +20,12 @@ var aldevDownloadCmd = &cobra.Command{
 }
 
 var (
-	// cfgFileName  string
-	verbose bool
-
-// useLocalDeps bool
-// options      string
+// no specific argument for now
 )
 
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevDownloadCmd)
-	aldevDownloadCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 }
 
 // ----------------------------------------------------------------------------
@@ -38,20 +33,15 @@ func init() {
 // ----------------------------------------------------------------------------
 
 func aldevDownloadRun(command *cobra.Command, args []string) {
-	// it's only here that we have this variable valued
-	if verbose {
-		utils.SetVerbose()
-	}
-
-	// reading the Aldev config one first time
-	cfg := utils.ReadConfig(cmd.GetConfigFilename())
+	// Reading this command's arguments, and reading the aldev YAML config file
+	cmd.ReadCommonArgsAndConfig()
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(100, nil)
 
-	// TODO add installation / lib update step -> maybe more in a `aldev install` subcommand
+	// TODO add installation / lib update step -> maybe rather in a `aldev install` subcommand
 	// TODO add -deps to include go get -u -v ./main && git commit && git push
 
 	// downloading various external resource in parallel
-	utils.DownloadExternalResources(aldevCtx, cfg)
+	utils.DownloadExternalResources(aldevCtx)
 }
