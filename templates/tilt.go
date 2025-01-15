@@ -85,7 +85,7 @@ if not apiOnly:
       webAppEnvVars = "set WEB_API_URL=http://localhost:{{.API.Port}} &&"
 
     envVarsSuffix = ''
-    envVarsSep = ''
+    envVarsPrefix = ''
     if os.name == 'nt':
       envVarsSuffix = ' &&'
       envVarsPrefix = ' set'
