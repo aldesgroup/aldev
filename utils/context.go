@@ -24,6 +24,8 @@ type CancelableContext interface {
 	getStdErrWriter() io.Writer
 	WithErrLogFn(errLogFn) CancelableContext
 	getErrLogFn() errLogFn
+	WithEnvVars(...string) CancelableContext
+	getEnvVars() []string
 	CancelAll()
 }
 
@@ -35,6 +37,7 @@ type baseCancelableContext struct {
 	stdoutWriter  io.Writer
 	stderrWriter  io.Writer
 	errLogFn      errLogFn
+	envVars       []string
 }
 
 func NewBaseContext() *baseCancelableContext {
@@ -45,7 +48,7 @@ func NewBaseContext() *baseCancelableContext {
 
 func newBaseCancelableContext() *baseCancelableContext {
 	ctx, cancelFn := context.WithCancel(context.Background())
-	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil}
+	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil}
 }
 
 func (thisCtx *baseCancelableContext) WithExecDir(dirElems ...string) CancelableContext {
@@ -86,6 +89,15 @@ func (thisCtx *baseCancelableContext) getErrLogFn() errLogFn {
 	}
 
 	return Fatal
+}
+
+func (thisCtx *baseCancelableContext) WithEnvVars(envVars ...string) CancelableContext {
+	thisCtx.envVars = envVars
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) getEnvVars() []string {
+	return thisCtx.envVars
 }
 
 func (thisCtx *baseCancelableContext) CancelAll() {

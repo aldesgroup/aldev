@@ -32,7 +32,7 @@ func downloadAllTranslationsFromGoogle(ctx CancelableContext) {
 	defer Recover(ctx, "downloading the external resources")
 
 	// no translation for a library
-	if getDevMode() == DevModeLIB {
+	if IsDevLibrary() {
 		return
 	}
 

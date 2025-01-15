@@ -13,9 +13,6 @@ import (
 )
 
 func GenerateDeployConfigs(ctx CancelableContext) {
-	if !IsLinux() {
-		Fatal(ctx, "This mode is not supported in non-Linux environments (yet)")
-	}
 
 	// making sure the config map is here and up-to-date
 	EnsureConfigmap()
@@ -51,7 +48,7 @@ func GenerateDeployConfigs(ctx CancelableContext) {
 	EnsureFileFromTemplate("Tiltfile", templates.Tiltfile)
 
 	// list of env vars for the web app
-	if IsDevWeb() {
+	if IsDevWebApp() {
 		EnsureFileFromTemplate(path.Join(Config().Web.SrcDir, ".env-list"), templates.WebEnvList)
 	}
 }

@@ -43,21 +43,16 @@ var aldevCmd = &cobra.Command{
 
 var (
 	// flags
-	cfgFileName           string
-	verbose               bool
-	swapCode              bool
-	disableConfgen        bool
-	api, lib, web, native bool // the 4 aldev modes, one and only one must be true at a time
+	cfgFileName    string
+	verbose        bool
+	swapCode       bool
+	disableConfgen bool
 )
 
 func init() {
 	// common arguments, for the "aldev" command for also all its subcommands
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
-	aldevCmd.PersistentFlags().BoolVarP(&api, "api", "a", false, "when developing a pure API (Linux)")
-	aldevCmd.PersistentFlags().BoolVarP(&lib, "lib", "l", false, "when developing a library (Linux)")
-	aldevCmd.PersistentFlags().BoolVarP(&web, "web", "w", false, "when developing a webapp, along with its API (Linux)")
-	aldevCmd.PersistentFlags().BoolVarP(&native, "native", "n", false, "when developing a native app (Windows)")
 
 	// arguments for the "aldev" command only
 	aldevCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
@@ -77,7 +72,6 @@ func GetAldevCmd() *cobra.Command {
 // and reads the content of the YAML aldev config file into a variable
 func ReadCommonArgsAndConfig() {
 	utils.SetVerbose(verbose)
-	utils.SetDevMode(api, lib, web, native)
 	utils.ReadConfig(cfgFileName)
 }
 
@@ -105,7 +99,7 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
 	if swapCode {
-		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap %s", utils.DevModeToString())
+		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap")
 	}
 
 	// --- main loop stuff
@@ -185,8 +179,8 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 
 	// in library mode, there no need for k8s, deployments, env vars, etc.
 	if utils.IsDevLibrary() {
-		utils.QuickRun("Installing / refreshing the dev environment", utils.Config().Lib.Install)
-		utils.Run("Developing the lib", ctx, true, utils.Config().Lib.Develop)
+		utils.QuickRun("Installing / refreshing the dev environment", "%s", utils.Config().Lib.Install)
+		utils.Run("Developing the lib", ctx, true, "%s", utils.Config().Lib.Develop)
 
 		// Wait for the context to be canceled or the program to exit
 		<-ctx.Done()

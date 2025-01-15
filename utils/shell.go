@@ -64,6 +64,11 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 		fromDirString = " [from " + cmd.Dir + "]"
 	}
 
+	// passing the env vars, if any
+	for _, envVar := range ctx.getEnvVars() {
+		cmd.Env = append(os.Environ(), envVar)
+	}
+
 	// bit of logging
 	if logStart {
 		// but only in verbose mode
@@ -81,14 +86,13 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 			Info("Command canceled due to context cancellation")
 		} else {
 			// let's re-run to have more info, if not printed on stderr at first
-			if ctx.getStdErrWriter() != os.Stderr {
-				Error("Command [%s] failed: %v", cmd.String(), errRun.Error())
-				Run("Re-running the command to get the error logs",
-					NewBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, cmd.String())
-			} else {
-				ctx.getErrLogFn()(ctx, "Command [%s] failed: %v", cmd.String(), errRun.Error())
-			}
-
+			// if ctx.getStdErrWriter() != os.Stderr {
+			// 	Error("Command [%s] failed: %v", cmd.String(), errRun.Error())
+			// 	Run("Re-running the command to get the error logs",
+			// 		NewBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, cmd.String())
+			// } else {
+			ctx.getErrLogFn()(ctx, "Command [%s] failed: %v", cmd.String(), errRun.Error())
+			// }
 		}
 	}
 

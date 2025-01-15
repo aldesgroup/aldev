@@ -146,6 +146,6 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig, cacheDir string) {
 
 // get the latest commit
 func lastCommit(repoPath string, branchOrTag string) string {
-	commitBytes := RunAndGet("Getting the latest commit", repoPath, false, "git rev-parse "+branchOrTag)
+	commitBytes := RunAndGet("Getting the latest commit", repoPath, false, "%s", "git rev-parse "+branchOrTag)
 	return string(commitBytes[:len(commitBytes)-1])
 }

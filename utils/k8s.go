@@ -47,15 +47,11 @@ func EnsureConfigmap() {
 }
 
 func DeployToLocalCluster(ctx CancelableContext) {
-	if !IsLinux() {
-		Fatal(ctx, "This mode is not supported in non-Linux environments (yet)")
-	}
-
 	// computing the custom options
 	if swapCode {
 		tiltOptions = " --use-local"
 	}
-	if IsDevAPI() {
+	if IsDevAPI() && !(IsDevWebApp() || IsDevNative()) {
 		tiltOptions += " --api-only"
 	}
 	if tiltOptions != "" {

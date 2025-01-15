@@ -74,5 +74,5 @@ func ReplaceInFile(ctx CancelableContext, filename string, replacements map[stri
 	for replace, by := range replacements {
 		fileContent = strings.ReplaceAll(fileContent, replace, by)
 	}
-	WriteStringToFile(ctx, filename, fileContent)
+	WriteStringToFile(ctx, filename, "%s", fileContent)
 }
