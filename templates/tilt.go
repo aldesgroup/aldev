@@ -14,12 +14,15 @@ useLocalDeps = cfg.get('use-local')
 apiOnly = cfg.get('api-only')
 
 # describing the deployment of all the backend services, and their configuration
+nsSuffix = ''
 if useLocalDeps or apiOnly:
   # when working with local dependencies, or in API-only mode, we do not dockerise the web part
-  k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/local'))
+  nsSuffix = 'local'
 else:
   # when working with no use of local deps, the base config is enough
-  k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/dev'))
+  nsSuffix = 'dev'
+
+k8s_yaml(kustomize('{{.Deploying.Dir}}/overlays/' + nsSuffix))
 
 # --- API part ----------------------------------------------------------------
 
@@ -50,19 +53,26 @@ docker_build_with_restart(
 # deploying the API
 k8s_resource('{{.AppName}}-api-depl', resource_deps=['{{.AppName}}-api-compile'])
 
-# --- PROXY part (for WSL) ----------------------------------------------------
-
-# getting the load balancer's IP - cf https://docs.tilt.dev/extensions.html
-apiHost = str(local(echo_off=True, command="kubectl get services --namespace kube-system "+
-  "-o jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].status.loadBalancer.ingress[0].ip}'"))
+# --- PROXY / PORT-FORWARDING part (for WSL) ----------------------------------
 
 # since the load balancer is on host 'apiHost' and not 'localhost', we can reach it by sending calls
 # to localhost:apiPort - from Windows for instance - and proxying them inside Linux to apiHost:apiPort
 if os.name != 'nt':
+  # getting the load balancer's IP - cf https://docs.tilt.dev/extensions.html
+  apiHost = str(local(echo_off=True, command="kubectl get services --namespace kube-system "+
+    "-o jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].status.loadBalancer.ingress[0].ip}'"))
+
   local_resource(
       name         ='{{.AppName}}-lb-proxy',
       cmd          ='killall -q socat || true',
       serve_cmd    ='socat TCP-LISTEN:{{.API.Port}},fork TCP:'+apiHost+':{{.API.Port}}',
+      resource_deps=['{{.AppName}}-api-depl'],
+      )
+else:
+  local_resource(
+      name         ='{{.AppName}}-lb-port-forward',
+      # cmd          ='killall -q socat || true',
+      serve_cmd    ='kubectl port-forward svc/{{.AppName}}-api-lb {{.API.Port}}:{{.API.Port}} -n {{.AppName}}-' + nsSuffix,
       resource_deps=['{{.AppName}}-api-depl'],
       )
 

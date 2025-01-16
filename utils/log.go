@@ -65,13 +65,21 @@ func Error(str string, params ...any) {
 	log("", slog.Error, "*", str, params...)
 }
 
+func ErrorAndCancel(ctx CancelableContext, str string, params ...any) {
+	Error(str, params...)
+	Info("Stack: %s", string(debug.Stack()))
+	if ctx != nil {
+		ctx.CancelAll()
+	}
+}
+
 func Fatal(ctx CancelableContext, str string, params ...any) {
 	Error(str, params...)
 	Info("Stack: %s", string(debug.Stack()))
 	if ctx != nil {
 		ctx.CancelAll()
 	}
-	Debug("Waiting a bit for other processes to finish")
+	Debug("Waiting a bit for other processes to finish, then EXITING")
 	time.Sleep(2 * time.Second)
 	os.Exit(1)
 }

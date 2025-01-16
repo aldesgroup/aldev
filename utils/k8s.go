@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 )
 
 var (
@@ -70,8 +69,7 @@ func DeployToLocalCluster(ctx CancelableContext) {
 
 	// making sure we clean up at the end
 	defer func() {
-		time.Sleep(100 * time.Millisecond)
-		Run("We'll clean up the context now", ctx, false, "tilt down%s", tiltOptions)
+		Run("We'll clean up the context now", NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout), true, "tilt down%s", tiltOptions)
 	}()
 
 	// Running a command that never finishes, with the cancelable context
@@ -80,7 +78,7 @@ func DeployToLocalCluster(ctx CancelableContext) {
 		mode = " --verbose --debug"
 	}
 	Run("Now we start Tilt to handle all the k8s & docker deployments",
-		ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
+		ctx.WithErrLogFn(ErrorAndCancel), true, "tilt up%s --stream%s", mode, tiltOptions)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()
