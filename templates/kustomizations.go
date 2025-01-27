@@ -16,7 +16,7 @@ resources:
   - {{.AppName}}-cm.yaml`
 
 const KustomizationBaseComplete = KustomizationBaseAPI + `
-    - {{.AppName}}-web.yaml`
+  - {{.AppName}}-web.yaml`
 
 const KustomizationOverlay = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
