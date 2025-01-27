@@ -38,20 +38,19 @@ func downloadAllTranslationsFromGoogle(ctx CancelableContext) {
 
 	// if there's an API, we need translations for it
 	if IsDevAPI() && Config().API != nil {
-		downloadTranslationForApp(ctx, Config().API.I18n, Config().API.DataDir)
-	} //
+		downloadTranslationForApp(ctx, Config().API.I18n, Config().API.DataDir, "in the API")
+	}
 
 	// if there's a native app, we need translations for it
 	if IsDevNative() && Config().Native != nil {
-		downloadTranslationForApp(ctx, Config().Native.I18n, Config().Native.DataDir)
+		downloadTranslationForApp(ctx, Config().Native.I18n, path.Join(Config().Native.SrcDir, Config().Native.DataDir), "in the native app")
 	}
 }
 
 // Downloading all the translations files configured for a given application (the API, or native app)
-func downloadTranslationForApp(ctx CancelableContext, i18nCfg *I18nConfig, destDir string) {
+func downloadTranslationForApp(ctx CancelableContext, i18nCfg *I18nConfig, destDir string, part string) {
 	if i18nCfg == nil || len(i18nCfg.Links) == 0 {
-		Error("Empty or incomplete i18n configuration!")
-		ctx.CancelAll()
+		ErrorAndCancel(ctx, "Empty or incomplete i18n configuration %s!", part)
 		return
 	}
 

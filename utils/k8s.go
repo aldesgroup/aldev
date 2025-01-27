@@ -53,6 +53,9 @@ func DeployToLocalCluster(ctx CancelableContext) {
 	if IsDevAPI() && !(IsDevWebApp() || IsDevNative()) {
 		tiltOptions += " --api-only"
 	}
+	if verbose {
+		tiltOptions += " --verbose"
+	}
 	if tiltOptions != "" {
 		tiltOptions = " --" + tiltOptions
 	}

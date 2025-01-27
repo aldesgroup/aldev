@@ -161,7 +161,7 @@ func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish boo
 	time.Sleep(50 * time.Millisecond)
 
 	// syncing the Go.sum file with the swaps done
-	goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetSrcDir())
+	goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
 	utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
 }
 

@@ -47,13 +47,8 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	cmd.ReadCommonArgsAndConfig()
 
-	// Controlling we're not using this in native dev
-	if utils.IsDevNative() {
-		utils.Fatal(nil, "This is not available for native development")
-	}
-
 	// the context to build Go sources
-	completeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetSrcDir())
+	completeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
 
 	// making sure we're applying what's decided in the go.mod file
 	utils.Run("Making sure we're using the right set of dependencies", completeCtx, false, "go mod tidy")
@@ -70,7 +65,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local%s ./main", utils.GetBinDir(), utils.Config().AppName, execExt)
 	mainRunCmd := fmt.Sprintf("%s/%s-api-local%s -config %s -srcdir %s", utils.Config().ResolvedBinDir(), utils.Config().AppName, execExt,
-		path.Join(utils.GetSrcDir(), utils.GetConfigPath()), utils.GetSrcDir())
+		path.Join(utils.GetGoSrcDir(), utils.GetConfigPath()), utils.GetGoSrcDir())
 	if utils.Config().Web != nil {
 		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
 	}
@@ -106,7 +101,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	utils.Run("Does it still compile after codegen step 3?", completeCtx, false, "%s", mainCompileCmd)
 
 	// formatting
-	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(utils.GetSrcDir(), "_include"), path.Join(utils.GetSrcDir(), "main"))
+	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(utils.GetGoSrcDir(), "_include"), path.Join(utils.GetGoSrcDir(), "main"))
 
 	// migrating the DBs if needed
 	if !utils.IsDevLibrary() {

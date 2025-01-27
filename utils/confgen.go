@@ -19,24 +19,32 @@ func GenerateDeployConfigs(ctx CancelableContext) {
 
 	// making sure some needed files are here: base local deployment
 	baseDir := EnsureDir(nil, Config().Deploying.Dir, "base")
-	EnsureFileFromTemplate(path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBase)
 	EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-api-.yaml"), templates.API)
 	EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-api-lb.yaml"), templates.LB)
-	EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-web.yaml"), templates.Web)
+	if IsDevWebApp() {
+		EnsureFileFromTemplate(path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBaseComplete)
+		EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-web.yaml"), templates.Web)
+	} else {
+		EnsureFileFromTemplate(path.Join(baseDir, "kustomization.yaml"), templates.KustomizationBaseAPI)
+	}
 
 	// docker files
 	dockerDir := EnsureDir(nil, Config().Deploying.Dir, "docker")
 	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-api-docker"), templates.DockerLocalAPI)
-	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-web-docker"), templates.DockerLocalWEB)
 	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
-	EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
+	if IsDevWebApp() {
+		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-web-docker"), templates.DockerLocalWEB)
+		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
+	}
 
 	// adding overlays
 	overlaysDir := EnsureDir(nil, Config().Deploying.Dir, "overlays")
 	addOverlay(overlaysDir, "dev", nil)
-	addOverlay(overlaysDir, "local", [][]string{
-		{"patch-no-web-container.yaml", templates.NoWebContainerPatch},
-	})
+	if IsDevWebApp() {
+		addOverlay(overlaysDir, "local", [][]string{{"patch-no-web-container.yaml", templates.NoWebContainerPatch}})
+	} else {
+		addOverlay(overlaysDir, "local", nil)
+	}
 	addOverlay(overlaysDir, "sandbox", nil)
 	addOverlay(overlaysDir, "staging", nil)
 	addOverlay(overlaysDir, "production", nil)
@@ -45,7 +53,14 @@ func GenerateDeployConfigs(ctx CancelableContext) {
 	// EnsureFileFromTemplate(".gitlab-ci.yml", templates.GitlabCI)
 
 	// last but not least, the Tiltfile
-	EnsureFileFromTemplate("Tiltfile", templates.Tiltfile)
+	tiltfileTemplate := templates.TiltfileAPI
+	if IsDevWebApp() {
+		tiltfileTemplate += templates.TiltfileWebPart
+	}
+	if IsDevNative() {
+		tiltfileTemplate += templates.TiltfileNativePart
+	}
+	EnsureFileFromTemplate("Tiltfile", tiltfileTemplate)
 
 	// list of env vars for the web app
 	if IsDevWebApp() {

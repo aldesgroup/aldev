@@ -107,7 +107,7 @@ func aldevRun(command *cobra.Command, args []string) {
 	// for which file changes are we going to restart the main loop?
 	watched := []string{cfgFileName} // Aldev's config
 	if utils.Config().API != nil {
-		watched = append(watched, path.Join(utils.GetSrcDir(), utils.GetConfigPath())) // the API or lib's config
+		watched = append(watched, path.Join(utils.GetGoSrcDir(), utils.GetConfigPath())) // the API or lib's config
 	}
 
 	// adding a watcher to detect some file changes
@@ -195,9 +195,5 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 
 		// Ready for launch
 		utils.DeployToLocalCluster(ctx)
-
-	} else if utils.IsDevNative() {
-		// we're doing native dev, and that's new (for now)
-		utils.Fatal(ctx, "Not implemented yet")
 	}
 }

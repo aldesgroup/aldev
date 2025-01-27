@@ -26,6 +26,8 @@ type CancelableContext interface {
 	getErrLogFn() errLogFn
 	WithEnvVars(...string) CancelableContext
 	getEnvVars() []string
+	WithReRun() CancelableContext
+	isReRun() bool
 	CancelAll()
 }
 
@@ -38,6 +40,7 @@ type baseCancelableContext struct {
 	stderrWriter  io.Writer
 	errLogFn      errLogFn
 	envVars       []string
+	reRun         bool
 }
 
 func NewBaseContext() *baseCancelableContext {
@@ -48,7 +51,7 @@ func NewBaseContext() *baseCancelableContext {
 
 func newBaseCancelableContext() *baseCancelableContext {
 	ctx, cancelFn := context.WithCancel(context.Background())
-	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil}
+	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil, false}
 }
 
 func (thisCtx *baseCancelableContext) WithExecDir(dirElems ...string) CancelableContext {
@@ -98,6 +101,15 @@ func (thisCtx *baseCancelableContext) WithEnvVars(envVars ...string) CancelableC
 
 func (thisCtx *baseCancelableContext) getEnvVars() []string {
 	return thisCtx.envVars
+}
+
+func (thisCtx *baseCancelableContext) WithReRun() CancelableContext {
+	thisCtx.reRun = true
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) isReRun() bool {
+	return thisCtx.reRun
 }
 
 func (thisCtx *baseCancelableContext) CancelAll() {

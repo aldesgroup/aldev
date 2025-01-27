@@ -54,10 +54,9 @@ type AldevConfig struct {
 		}
 	}
 	Native *struct { // must be filled if there's a native app
-		SrcDir  string // where the Native app's GoaldN-based code should be found
-		I18n    *I18nConfig
-		DataDir string // where to find bootstraping data to run the app
-
+		SrcDir  string      // where the Native app's GoaldN-based code should be found
+		I18n    *I18nConfig //
+		DataDir string      // where to find bootstraping data to run the app
 	}
 	Vendors   []*VendorConfig // external projects to vendor into our project
 	Deploying *struct {       // Section for the local deployment of the app
@@ -89,7 +88,8 @@ type I18nConfig struct {
 	File    string   // the path of the file where to write the downloaded translations
 }
 
-func GetSrcDir() string {
+// returns the name of the folder where to find the Go source code
+func GetGoSrcDir() string {
 	if IsDevLibrary() {
 		return Config().Lib.SrcDir
 	}

@@ -6,15 +6,17 @@ kind: Namespace
 metadata:
   name: {{.AppName}}-%s`
 
-const KustomizationBase = `apiVersion: kustomize.config.k8s.io/v1beta1
+const KustomizationBaseAPI = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Specify the resources in the base
 resources:
   - {{.AppName}}-api-.yaml
   - {{.AppName}}-api-lb.yaml
-  - {{.AppName}}-cm.yaml
-  - {{.AppName}}-web.yaml`
+  - {{.AppName}}-cm.yaml`
+
+const KustomizationBaseComplete = KustomizationBaseAPI + `
+    - {{.AppName}}-web.yaml`
 
 const KustomizationOverlay = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
