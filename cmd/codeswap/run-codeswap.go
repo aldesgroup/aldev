@@ -1,4 +1,4 @@
-package swap
+package codeswap
 
 import (
 	"os"
@@ -167,7 +167,7 @@ func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish boo
 
 // a set associates a swap config, and the files that should be modified according to it
 type swapSet struct {
-	swapConf *utils.LocalSwapsConfig
+	swapConf *utils.CodeSwapsConfig
 	files    []string
 }
 
@@ -176,7 +176,7 @@ func getWatchedFilesAndFolders(ctx utils.CancelableContext) (sets []*swapSet, wa
 	folders = map[string]bool{}
 	done = map[string]bool{}
 
-	for _, swapConf := range utils.Config().LocalSwaps {
+	for _, swapConf := range utils.Config().CodeSwaps {
 		sets = append(sets, (&swapSet{swapConf: swapConf}).buildFrom(ctx, swapConf.From))
 	}
 

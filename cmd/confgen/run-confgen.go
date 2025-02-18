@@ -1,4 +1,4 @@
-package generate
+package confgen
 
 import (
 	"github.com/aldesgroup/aldev/cmd"
@@ -36,5 +36,5 @@ func aldevConfgenRun(command *cobra.Command, args []string) {
 	cmd.ReadCommonArgsAndConfig()
 
 	// downloading various external resource in parallel
-	utils.GenerateDeployConfigs(nil)
+	utils.GenerateDeployConfigs(nil, true)
 }

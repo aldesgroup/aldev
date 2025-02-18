@@ -1,4 +1,4 @@
-package complete
+package codegen
 
 import (
 	"fmt"
@@ -26,6 +26,7 @@ var aldevCodegenCmd = &cobra.Command{
 var (
 	compilationOnly bool
 	regen           bool
+	noContainer     bool
 )
 
 func init() {
@@ -34,6 +35,7 @@ func init() {
 
 	aldevCodegenCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
 	aldevCodegenCmd.Flags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration")
+	aldevCodegenCmd.Flags().BoolVarP(&noContainer, "no-container", "n", false, "if true, then does not build the binary for containerisation")
 }
 
 // ----------------------------------------------------------------------------
@@ -64,8 +66,10 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 		execExt = ".exe"
 	}
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local%s ./main", utils.GetBinDir(), utils.Config().AppName, execExt)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local%s -config %s -srcdir %s", utils.Config().ResolvedBinDir(), utils.Config().AppName, execExt,
-		path.Join(utils.GetGoSrcDir(), utils.GetConfigPath()), utils.GetGoSrcDir())
+	mainRunCmd := fmt.Sprintf("%s/%s-api-local%s -config %s -srcdir %s -bindir %s",
+		utils.Config().ResolvedBinDir(), utils.Config().AppName, execExt,
+		path.Join(utils.GetGoSrcDir(), utils.GetConfigPath()),
+		utils.GetGoSrcDir(), path.Join(utils.GetGoSrcDir(), utils.GetBinDir()))
 	if utils.Config().Web != nil {
 		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
 	}
@@ -86,19 +90,25 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	utils.QuickRun("Generating stuff: DB list, BO registry...", "%s", mainRunCmd+" -codegen 1"+regenArg)
 
 	// compilation n°2
-	utils.Run("Does it still compile after codegen step 1?", completeCtx, false, "%s", mainCompileCmd)
+	if codeHasChanged() {
+		utils.Run("Does it still compile after codegen step 1?", completeCtx, false, "%s", mainCompileCmd)
+	}
 
 	// generation step n°2
 	utils.QuickRun("Generating stuff: BO classes...", "%s", mainRunCmd+" -codegen 2"+regenArg)
 
 	// compilation n°3
-	utils.Run("Does it still compile after codegen step 2?", completeCtx, false, "%s", mainCompileCmd)
+	if codeHasChanged() {
+		utils.Run("Does it still compile after codegen step 2?", completeCtx, false, "%s", mainCompileCmd)
+	}
 
 	// generation step n°3
 	utils.QuickRun("Generating stuff: BO vmaps, BO web models, etc...", "%s", mainRunCmd+" -codegen 3"+regenArg)
 
 	// compilation n°4
-	utils.Run("Does it still compile after codegen step 3?", completeCtx, false, "%s", mainCompileCmd)
+	if codeHasChanged() {
+		utils.Run("Does it still compile after codegen step 3?", completeCtx, false, "%s", mainCompileCmd)
+	}
 
 	// formatting
 	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(utils.GetGoSrcDir(), "_include"), path.Join(utils.GetGoSrcDir(), "main"))
@@ -109,11 +119,21 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// under Windows, the executable for codegen and API serving is not the same - we need to build the executable for the containers
-	if utils.IsWindows() {
+	if utils.IsWindows() && !noContainer && codeHasChanged() {
 		secondaryCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", utils.GetBinDir(), utils.Config().AppName)
 		utils.Run("Compiling for Docker (Linux)", completeCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd)
 	}
 
 	// bit of logging
-	utils.Info("Aldev complete done in %s", time.Since(start))
+	utils.Info("Aldev codegen done in %s", time.Since(start))
+}
+
+// ----------------------------------------------------------------------------
+// Utils
+// ----------------------------------------------------------------------------
+
+const dirtyFILENAME = "dirty"
+
+func codeHasChanged() bool {
+	return string(utils.ReadFile(nil, path.Join(utils.GetGoSrcDir(), utils.GetBinDir(), dirtyFILENAME), false)) == "true"
 }

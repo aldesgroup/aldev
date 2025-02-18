@@ -47,6 +47,7 @@ var (
 	verbose        bool
 	swapCode       bool
 	disableConfgen bool
+	noContainer    bool
 )
 
 func init() {
@@ -58,6 +59,7 @@ func init() {
 	aldevCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
 		"use swapping of code, to use the local version of some dependencies for instance")
 	aldevCmd.Flags().BoolVarP(&disableConfgen, "disable-confgen", "d", false, "disable the generation of all the config files")
+	// aldevCmd.Flags().BoolVarP(&noContainer, "no-container", "n", false, "deploys the app without Kubernetes nor any container, for quick dev & testing")
 }
 
 // ----------------------------------------------------------------------------
@@ -190,10 +192,14 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 
 		// Generating config files for deploying the app locally, CI / CD, etc.
 		if !disableConfgen {
-			utils.GenerateDeployConfigs(ctx)
+			utils.GenerateDeployConfigs(ctx, !noContainer)
 		}
 
 		// Ready for launch
-		utils.DeployToLocalCluster(ctx)
+		if noContainer {
+			utils.DeployWithNoContainer(ctx)
+		} else {
+			utils.DeployToLocalCluster(ctx)
+		}
 	}
 }

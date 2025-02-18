@@ -1,4 +1,4 @@
-package update
+package refresh
 
 import (
 	"github.com/aldesgroup/aldev/cmd"
@@ -44,4 +44,7 @@ func aldevRefreshRun(command *cobra.Command, args []string) {
 
 	// downloading various external resource in parallel
 	utils.DownloadExternalResources(aldevCtx)
+
+	// creates the required symlinks
+	utils.CreateMissingSymlinks(aldevCtx)
 }

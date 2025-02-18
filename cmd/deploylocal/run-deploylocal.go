@@ -1,4 +1,4 @@
-package deploy
+package deploylocal
 
 import (
 	"github.com/aldesgroup/aldev/cmd"

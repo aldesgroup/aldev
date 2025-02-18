@@ -1,49 +1,15 @@
 // ----------------------------------------------------------------------------
-// The code here is about using kubernetes
+// The code here is about local deployment with Containers / Kubernetes / Tilt
 // ----------------------------------------------------------------------------
 package utils
 
 import (
 	"os"
-	"path"
-	"strings"
 )
 
 var (
 	tiltOptions string
 )
-
-// Making sure we have a ConfigMap to pass to K8S before deploying to a local cluster
-func EnsureConfigmap() {
-	Debug("Making sure the configmap is up-to-date")
-	configFilepath := path.Join(Config().API.SrcDir, Config().API.Config)
-
-	// some controls first
-	if Config().Deploying.Dir == "" {
-		Fatal(nil, "Empty 'deploying.dir' config!")
-	}
-	configFile, errStat := os.Stat(configFilepath)
-	FatalIfErr(nil, errStat)
-
-	// (re)init the file
-	baseDir := EnsureDir(nil, Config().Deploying.Dir, "base")
-	configMapFilename := path.Join(baseDir, Config().AppName+"-cm.yaml")
-	WriteStringToFile(nil, configMapFilename, "# generated from api/config.yaml by Aldev")
-
-	// creating the config map
-	cmd := "kubectl create configmap %s-configmap" // creating a configmap object here
-	cmd += " -o yaml"                              // not forgetting the namespace here, and we want a YAML output...
-	cmd += " --dry-run=client --from-file=%s"      // ... so we dry-run this, from the config file found in the API sources
-	fileContentBytes := RunAndGet("We need to build a configmap from our API's config", ".", false,
-		cmd, Config().AppName, configFilepath)
-
-	// tweaking it
-	fileContent := string(fileContentBytes)
-	fileContent = strings.Replace(fileContent, "creationTimestamp: null", "creationTimestamp: \"%s\"", 1)
-
-	// outputting it
-	WriteStringToFile(nil, configMapFilename, fileContent, configFile.ModTime().Format("2006-01-02T15:04:05Z"))
-}
 
 func DeployToLocalCluster(ctx CancelableContext) {
 	// computing the custom options
