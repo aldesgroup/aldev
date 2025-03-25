@@ -1,6 +1,6 @@
 module github.com/aldesgroup/aldev
 
-go 1.22.0
+go 1.24.1
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0

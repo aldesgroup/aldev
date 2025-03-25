@@ -69,7 +69,7 @@ type AldevConfig struct {
 type I18nConfig struct {
 	Links   []string // the link to download the translations from; each new file can override previous translations
 	KeySize int      // the max size of the key in the translation UID namespace.key
-	File    string   // the path of the file where to write the downloaded translations
+	Folder  string   // the path of the file where to write the downloaded translations
 }
 
 type VendorConfig struct {

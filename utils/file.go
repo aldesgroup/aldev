@@ -18,6 +18,13 @@ func EnsureDir(ctx CancelableContext, pathElem ...string) string {
 	return dirname
 }
 
+func EnsureNoDir(ctx CancelableContext, pathElem ...string) string {
+	dirname := path.Join(pathElem...)
+	FatalIfErr(ctx, os.RemoveAll(dirname))
+
+	return dirname
+}
+
 func WriteBytesToFile(ctx CancelableContext, filename string, bytes []byte) {
 	// creating the intermediate directory if necessary
 	if filename != path.Base(filename) {
