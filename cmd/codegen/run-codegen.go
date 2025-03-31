@@ -87,7 +87,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// generation step n°1
-	utils.QuickRun("Generating stuff: DB list, BO registry...", "%s", mainRunCmd+" -codegen 1"+regenArg)
+	utils.QuickRun("Generating stuff: DB list, BOclasses, BO registry...", "%s", mainRunCmd+" -codegen 1"+regenArg)
 
 	// compilation n°2
 	if codeHasChanged() {
@@ -95,7 +95,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// generation step n°2
-	utils.QuickRun("Generating stuff: BO classes...", "%s", mainRunCmd+" -codegen 2"+regenArg)
+	utils.QuickRun("Generating stuff: BO specs...", "%s", mainRunCmd+" -codegen 2"+regenArg)
 
 	// compilation n°3
 	if codeHasChanged() {
