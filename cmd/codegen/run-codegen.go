@@ -73,6 +73,9 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	if utils.Config().Web != nil {
 		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
 	}
+	if utils.Config().Native != nil {
+		mainRunCmd = fmt.Sprintf("%s -nativedir %s", mainRunCmd, utils.Config().Native.SrcDir)
+	}
 
 	// compilation n°1 - this is needed to have the run command up-to-date
 	utils.Run("Only compiling & formatting the code", completeCtx, false, "%s", mainCompileCmd)

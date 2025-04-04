@@ -177,6 +177,7 @@ func getWatchedFilesAndFolders(ctx utils.CancelableContext) (sets []*swapSet, wa
 	done = map[string]bool{}
 
 	for _, swapConf := range utils.Config().CodeSwaps {
+		utils.Debug("--- Swap set: from '%s' for %s file(s)", swapConf.From, strings.Join(swapConf.For, ", "))
 		sets = append(sets, (&swapSet{swapConf: swapConf}).buildFrom(ctx, swapConf.From))
 	}
 
@@ -256,7 +257,7 @@ func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
 				direction = "reverse"
 			}
 			utils.Info("File %s is being %s-swapped", filename, direction)
-			utils.WriteStringToFile(ctx, filename, modifiedText)
+			utils.WriteStringToFile(ctx, filename, "%s", modifiedText)
 		}
 	}
 }
