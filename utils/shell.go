@@ -91,7 +91,9 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 				Run("Re-running the command to get the error logs",
 					NewBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, "%s", cmd.String())
 			} else {
-				ctx.getErrLogFn()(ctx, "Command [%s] failed: %v", cmd.String(), errRun.Error())
+				if !ctx.isAllowingFailure() {
+					ctx.getErrLogFn()(ctx, "Command [%s] failed: %v", cmd.String(), errRun.Error())
+				}
 			}
 		}
 	}

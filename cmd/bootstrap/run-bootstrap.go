@@ -17,6 +17,7 @@ import (
 // Command declaration
 // ----------------------------------------------------------------------------
 
+// TODO remove this
 const aldevINITxREPO = "ALDEV_INITREPO"
 
 // aldevBootstrapCmd represents a subcommand
@@ -31,7 +32,6 @@ var aldevBootstrapCmd = &cobra.Command{
 }
 
 var (
-	// cfgFileName  string
 	verbose     bool
 	projectName string
 	apiOnly     bool

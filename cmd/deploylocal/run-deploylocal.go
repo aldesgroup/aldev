@@ -19,15 +19,14 @@ var aldevDeployLocalCmd = &cobra.Command{
 }
 
 var (
-	// cfgFileName  string
-	verbose  bool
+	// verbose  bool
 	swapCode bool
 )
 
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevDeployLocalCmd)
-	aldevDeployLocalCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
+	// aldevDeployLocalCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "activates the verbose mode")
 	aldevDeployLocalCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
 		"use swapping of code, to use the local version of some dependencies for instance")
 }

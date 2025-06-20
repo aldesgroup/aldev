@@ -10,9 +10,14 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"sync"
 	"syscall"
 	"time"
 )
+
+// ----------------------------------------------------------------------------
+// Cancelable Context
+// ----------------------------------------------------------------------------
 
 type CancelableContext interface {
 	context.Context
@@ -28,8 +33,15 @@ type CancelableContext interface {
 	getEnvVars() []string
 	WithReRun() CancelableContext
 	isReRun() bool
+	WithAllowFailure(bool) CancelableContext
+	isAllowingFailure() bool
 	CancelAll()
+	NewChildContext() CancelableContext
 }
+
+// ----------------------------------------------------------------------------
+// Base Cancelable Context
+// ----------------------------------------------------------------------------
 
 type baseCancelableContext struct {
 	context.Context
@@ -41,6 +53,7 @@ type baseCancelableContext struct {
 	errLogFn      errLogFn
 	envVars       []string
 	reRun         bool
+	allowFailure  bool
 }
 
 func NewBaseContext() *baseCancelableContext {
@@ -51,11 +64,14 @@ func NewBaseContext() *baseCancelableContext {
 
 func newBaseCancelableContext() *baseCancelableContext {
 	ctx, cancelFn := context.WithCancel(context.Background())
-	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil, false}
+	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil, false, false}
 }
 
 func (thisCtx *baseCancelableContext) WithExecDir(dirElems ...string) CancelableContext {
-	thisCtx.execDir = path.Join(dirElems...)
+	if len(dirElems) > 0 {
+		thisCtx.execDir = path.Join(dirElems...)
+	}
+
 	return thisCtx
 }
 
@@ -112,12 +128,25 @@ func (thisCtx *baseCancelableContext) isReRun() bool {
 	return thisCtx.reRun
 }
 
+func (thisCtx *baseCancelableContext) WithAllowFailure(allowFailure bool) CancelableContext {
+	thisCtx.allowFailure = allowFailure
+	return thisCtx
+}
+
+func (thisCtx *baseCancelableContext) isAllowingFailure() bool {
+	return thisCtx.allowFailure
+}
+
 func (thisCtx *baseCancelableContext) CancelAll() {
 	thisCtx.cancelFn()
 }
 
 // checking this base implem does satisfy the interface above
 var _ CancelableContext = (*baseCancelableContext)(nil)
+
+// ----------------------------------------------------------------------------
+// Aldev Context
+// ----------------------------------------------------------------------------
 
 // an Aldev Context has a loop and allows to restart it
 type AldevContext interface {
@@ -133,6 +162,8 @@ type aldevContext struct {
 	loopCtx    *baseCancelableContext // context used for the loop run by aldev
 	exitWaitMs int                    // time waited right after cancelling the loop
 	stopFn     func()                 // funtion called when the user stops the program
+	children   []CancelableContext    // children contexts
+	mx         sync.Mutex             // mutex to protect the children contexts
 }
 
 func (aldevCtx *aldevContext) GetLoopCtx() CancelableContext {
@@ -151,6 +182,9 @@ func (aldevCtx *aldevContext) RestartLoop() {
 func (aldevCtx *aldevContext) CancelAll() {
 	aldevCtx.stopFn()
 	aldevCtx.loopCtx.CancelAll()
+	for _, childCtx := range aldevCtx.children {
+		childCtx.CancelAll()
+	}
 	Info("Waiting for some cleanup...")
 	time.Sleep(time.Duration(aldevCtx.exitWaitMs) * time.Millisecond) // TODO waiting
 	aldevCtx.cancelFn()
@@ -186,4 +220,20 @@ func InitAldevContext(waitTimeMs int, stopFn func()) *aldevContext {
 	}()
 
 	return aldevCtx
+}
+
+// ----------------------------------------------------------------------------
+// Children contexts
+// ----------------------------------------------------------------------------
+
+func (aldevCtx *aldevContext) NewChildContext() CancelableContext {
+	aldevCtx.mx.Lock()
+	defer aldevCtx.mx.Unlock()
+	childCtx := newBaseCancelableContext()
+	aldevCtx.children = append(aldevCtx.children, childCtx)
+	return childCtx
+}
+
+func (baseCancelableContext *baseCancelableContext) NewChildContext() CancelableContext {
+	panic("No child context on children contexts allowed")
 }

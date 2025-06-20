@@ -64,6 +64,7 @@ type AldevConfig struct {
 	}
 	CodeSwaps []*CodeSwapsConfig // Automatically, temporarily swapping bits of code
 	Symlinks  []*SymlinkConfig   // Create symlinks, to help code-swapping for instance
+	Jobs      []*JobConfig       // Jobs to run
 }
 
 type I18nConfig struct {
@@ -92,6 +93,17 @@ type CodeSwapsConfig struct {
 type SymlinkConfig struct {
 	Link string // what to link
 	As   string // how to link it
+}
+
+type JobConfig struct {
+	Description string       // a short description of the job
+	Cmds        []*CmdConfig // a list of commands to run
+}
+
+type CmdConfig struct {
+	Exec   string // the command to run
+	From   string // the path from which to run the command
+	FailOK bool   // if true, then the command is allowed to fail
 }
 
 // returns the name of the folder where to find the Go source code
