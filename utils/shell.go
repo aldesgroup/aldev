@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	core "github.com/aldesgroup/corego"
 )
 
 func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsString string, params ...any) {
@@ -92,7 +94,8 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 					NewBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, "%s", cmd.String())
 			} else {
 				if !ctx.isAllowingFailure() {
-					ctx.getErrLogFn()(ctx, "Command [%s] failed: %v", cmd.String(), errRun.Error())
+					// ctx.getErrLogFn()("Command [%s] failed: %v", cmd.String(), errRun.Error())
+					core.PanicMsg("Command [%s] failed: %v", cmd.String(), errRun.Error())
 				}
 			}
 		}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aldesgroup/aldev/templates"
+	core "github.com/aldesgroup/corego"
 )
 
 // this struct is used to read a Google spreadsheet containing translations
@@ -38,24 +39,24 @@ func downloadAllTranslationsFromGoogle(ctx CancelableContext) {
 
 	// if there's an API - which maybe serves the translation for a web app, we need translations for it
 	if IsDevAPI() && Config().API != nil {
-		downloadTranslationsForApp(ctx, Config().API.DataDir, "in the API", Config().API.I18n, false)
+		downloadTranslationsForApp(Config().API.DataDir, "in the API", Config().API.I18n, false)
 	}
 
 	// if there's a native app, we need translations for it - and the app should contain them all from the get-go
 	if IsDevNative() && Config().Native != nil {
-		languages, namespaces := downloadTranslationsForApp(ctx, Config().Native.SrcDir, "in the native app", Config().Native.I18n, true)
+		languages, namespaces := downloadTranslationsForApp(Config().Native.SrcDir, "in the native app", Config().Native.I18n, true)
 
 		// making the i18n files available in the native app
-		generateI18nFile(ctx, languages, namespaces)
+		generateI18nFile(languages, namespaces)
 	}
 }
 
 // Downloading all the translations files configured for a given application (the API, or native app)
-func downloadTranslationsForApp(ctx CancelableContext, destDir string, part string, i18nCfg *I18nConfig,
+func downloadTranslationsForApp(destDir string, part string, i18nCfg *I18nConfig,
 	doReturn bool) (languages []translationLanguage, namespaces []translationNamespace) {
 	// a bit of control first
 	if i18nCfg == nil || len(i18nCfg.Links) == 0 {
-		ErrorAndCancel(ctx, "Empty or incomplete i18n configuration %s!", part)
+		core.PanicMsg("Empty or incomplete i18n configuration %s!", part)
 		return nil, nil
 	}
 
@@ -66,7 +67,7 @@ func downloadTranslationsForApp(ctx CancelableContext, destDir string, part stri
 	destFolder := path.Join(destDir, i18nCfg.Folder)
 
 	// removing the old one, if it exists
-	EnsureNoDir(ctx, destFolder)
+	core.EnsureNoDir(destFolder)
 
 	// gathering all the translations in a map, allowing overrides
 	allTranslations := map[translationLanguage]map[translationNamespace]map[translationKey]translationValue{}
@@ -91,7 +92,7 @@ func downloadTranslationsForApp(ctx CancelableContext, destDir string, part stri
 		var row []string
 
 		// these are the languages required by the Aldev config
-		requiredLanguages := MapFn(strings.Split(Config().Languages, ","), func(str string) translationLanguage { return translationLanguage(trim(string(str))) })
+		requiredLanguages := core.MapFn(strings.Split(Config().Languages, ","), func(str string) translationLanguage { return translationLanguage(trim(string(str))) })
 		checkedLanguages := []translationLanguage{}
 
 		// adding all the translations, dealing with 1 language at a time
@@ -100,7 +101,7 @@ func downloadTranslationsForApp(ctx CancelableContext, destDir string, part stri
 			language := translationLanguage(strings.ToLower(trim(header[colIdx])))
 
 			// only considering the required languages
-			if InSlice(requiredLanguages, language) {
+			if core.InSlice(requiredLanguages, language) {
 				checkedLanguages = append(checkedLanguages, language)
 
 				// init of the translations for this language, if needed
@@ -130,8 +131,8 @@ func downloadTranslationsForApp(ctx CancelableContext, destDir string, part stri
 
 		// checking that every required language is present
 		for _, requiredLanguage := range requiredLanguages {
-			if !InSlice(checkedLanguages, requiredLanguage) {
-				Fatal(ctx, "Language '%s' is required, but not present in the current translation file", requiredLanguage)
+			if !core.InSlice(checkedLanguages, requiredLanguage) {
+				core.PanicMsg("Language '%s' is required, but not present in the current translation file", requiredLanguage)
 			}
 		}
 	}
@@ -146,7 +147,7 @@ func downloadTranslationsForApp(ctx CancelableContext, destDir string, part stri
 			waitGroup.Add(1)
 
 			// here's a little worker to handler 1 couple (language x namespace)
-			go createFile(ctx, waitGroup, destFolder, language, namespace, translationsForNamespace)
+			go createFile(waitGroup, destFolder, language, namespace, translationsForNamespace)
 		}
 	}
 
@@ -165,7 +166,7 @@ func downloadTranslationsForApp(ctx CancelableContext, destDir string, part stri
 	return
 }
 
-func createFile(ctx CancelableContext, wg *sync.WaitGroup, destFolder string, lg translationLanguage,
+func createFile(wg *sync.WaitGroup, destFolder string, lg translationLanguage,
 	ns translationNamespace, translations map[translationKey]translationValue) {
 	// whatever happens, this worker will end up being DONE
 	defer wg.Done()
@@ -188,7 +189,7 @@ func createFile(ctx CancelableContext, wg *sync.WaitGroup, destFolder string, lg
 	filepath := path.Join(destFolder, string(lg), filename)
 
 	// ok for writing it all out
-	WriteStringToFile(ctx, filepath, "%s", contentString)
+	core.WriteStringToFile(filepath, "%s", contentString)
 
 	Debug("Wrote: %s", filepath)
 }
@@ -225,7 +226,7 @@ func keyFromColumn(keyColumnValue string, max int) translationKey {
 }
 
 // Creates the i18n-files.ts file in the native app
-func generateI18nFile(ctx CancelableContext, languages []translationLanguage, namespaces []translationNamespace) {
+func generateI18nFile(languages []translationLanguage, namespaces []translationNamespace) {
 	// making sure this will all be sorted
 	slices.Sort(languages)
 	slices.Sort(namespaces)

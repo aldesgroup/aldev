@@ -13,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	core "github.com/aldesgroup/corego"
 )
 
 // ----------------------------------------------------------------------------
@@ -27,8 +29,8 @@ type CancelableContext interface {
 	getStdOutWriter() io.Writer
 	WithStdErrWriter(io.Writer) CancelableContext
 	getStdErrWriter() io.Writer
-	WithErrLogFn(errLogFn) CancelableContext
-	getErrLogFn() errLogFn
+	// WithErrLogFn(errLogFn) CancelableContext
+	// getErrLogFn() errLogFn
 	WithEnvVars(...string) CancelableContext
 	getEnvVars() []string
 	WithReRun() CancelableContext
@@ -107,7 +109,7 @@ func (thisCtx *baseCancelableContext) getErrLogFn() errLogFn {
 		return thisCtx.errLogFn
 	}
 
-	return Fatal
+	return core.PanicMsg
 }
 
 func (thisCtx *baseCancelableContext) WithEnvVars(envVars ...string) CancelableContext {
@@ -138,7 +140,9 @@ func (thisCtx *baseCancelableContext) isAllowingFailure() bool {
 }
 
 func (thisCtx *baseCancelableContext) CancelAll() {
-	thisCtx.cancelFn()
+	if thisCtx.cancelFn != nil {
+		thisCtx.cancelFn()
+	}
 }
 
 // checking this base implem does satisfy the interface above

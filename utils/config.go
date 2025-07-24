@@ -7,20 +7,34 @@ import (
 	"os"
 	"path"
 
+	core "github.com/aldesgroup/corego"
 	"gopkg.in/yaml.v3"
 )
 
 var (
 	// the instance bearing all the configuration
-	config *AldevConfig
+	config         *AldevConfig
+	cacheDirectory string
 )
 
 func Config() *AldevConfig {
 	if config == nil {
-		Fatal(nil, "Aldev configuration has never been read!")
+		core.PanicMsg("Aldev configuration has never been read!")
 	}
 
 	return config
+}
+
+func GetCacheDir() string {
+	// if cacheDirectory == "" {
+	// 	cacheDirectory = "../tmp"
+	// }
+
+	return cacheDirectory
+}
+
+func SetCacheDir(cacheDir string) {
+	cacheDirectory = cacheDir
 }
 
 type AldevConfig struct {
@@ -63,7 +77,6 @@ type AldevConfig struct {
 		Dir string // where all the deploying config should be
 	}
 	CodeSwaps []*CodeSwapsConfig // Automatically, temporarily swapping bits of code
-	Symlinks  []*SymlinkConfig   // Create symlinks, to help code-swapping for instance
 	Jobs      []*JobConfig       // Jobs to run
 }
 
@@ -90,10 +103,10 @@ type CodeSwapsConfig struct {
 	}
 }
 
-type SymlinkConfig struct {
-	Link string // what to link
-	As   string // how to link it
-}
+// type SymlinkConfig struct {
+// 	Link string // what to link
+// 	As   string // how to link it
+// }
 
 type JobConfig struct {
 	Description string       // a short description of the job
@@ -138,10 +151,10 @@ func ReadConfig(cfgFileName string) {
 
 	// Reading the config file into bytes
 	yamlBytes, errRead := os.ReadFile(cfgFileName)
-	FatalIfErr(nil, errRead)
+	core.PanicIfErr(errRead)
 
 	// Unmarshalling the YAML file
-	FatalIfErr(nil, yaml.Unmarshal(yamlBytes, config))
+	core.PanicIfErr(yaml.Unmarshal(yamlBytes, config))
 
 	// Adding the languages to the env vars for the web
 	if config.Web != nil {

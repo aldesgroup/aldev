@@ -12,6 +12,8 @@ var (
 )
 
 func DeployToLocalCluster(ctx CancelableContext) {
+	defer Recover(ctx, "Deploying the app using Tilt")
+
 	// computing the custom options
 	if swapCode {
 		tiltOptions = " --use-local"
@@ -47,7 +49,7 @@ func DeployToLocalCluster(ctx CancelableContext) {
 		mode = " --verbose --debug"
 	}
 	Run("Now we start Tilt to handle all the k8s & docker deployments",
-		ctx.WithErrLogFn(ErrorAndCancel), true, "tilt up%s --stream%s", mode, tiltOptions)
+		ctx, true, "tilt up%s --stream%s", mode, tiltOptions)
 
 	// Wait for the context to be canceled or the program to exit
 	<-ctx.Done()

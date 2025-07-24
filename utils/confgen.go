@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aldesgroup/aldev/templates"
+	core "github.com/aldesgroup/corego"
 )
 
 // Making sure we have a ConfigMap to pass to K8S before deploying to a local cluster
@@ -21,15 +22,15 @@ func EnsureConfigmap() {
 
 	// some controls first
 	if Config().Deploying.Dir == "" {
-		Fatal(nil, "Empty 'deploying.dir' config!")
+		core.PanicMsg("Empty 'deploying.dir' config!")
 	}
 	configFile, errStat := os.Stat(configFilepath)
-	FatalIfErr(nil, errStat)
+	core.PanicIfErr(errStat)
 
 	// (re)init the file
-	baseDir := EnsureDir(nil, Config().Deploying.Dir, "base")
+	baseDir := core.EnsureDir(Config().Deploying.Dir, "base")
 	configMapFilename := path.Join(baseDir, Config().AppName+"-cm.yaml")
-	WriteStringToFile(nil, configMapFilename, "# generated from api/config.yaml by Aldev")
+	core.WriteStringToFile(configMapFilename, "# generated from api/config.yaml by Aldev")
 
 	// creating the config map
 	cmd := "kubectl create configmap %s-configmap" // creating a configmap object here
@@ -43,7 +44,7 @@ func EnsureConfigmap() {
 	fileContent = strings.Replace(fileContent, "creationTimestamp: null", "creationTimestamp: \"%s\"", 1)
 
 	// outputting it
-	WriteStringToFile(nil, configMapFilename, fileContent, configFile.ModTime().Format("2006-01-02T15:04:05Z"))
+	core.WriteStringToFile(configMapFilename, fileContent, configFile.ModTime().Format("2006-01-02T15:04:05Z"))
 }
 
 func GenerateDeployConfigs(ctx CancelableContext, dockerAllowed bool) {
@@ -53,7 +54,7 @@ func GenerateDeployConfigs(ctx CancelableContext, dockerAllowed bool) {
 		EnsureConfigmap()
 
 		// making sure some needed files are here: base local deployment
-		baseDir := EnsureDir(nil, Config().Deploying.Dir, "base")
+		baseDir := core.EnsureDir(Config().Deploying.Dir, "base")
 		EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-api-.yaml"), templates.API)
 		EnsureFileFromTemplate(path.Join(baseDir, Config().AppName+"-api-lb.yaml"), templates.LB)
 		if IsDevWebApp() {
@@ -64,7 +65,7 @@ func GenerateDeployConfigs(ctx CancelableContext, dockerAllowed bool) {
 		}
 
 		// docker files
-		dockerDir := EnsureDir(nil, Config().Deploying.Dir, "docker")
+		dockerDir := core.EnsureDir(Config().Deploying.Dir, "docker")
 		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-api-docker"), templates.DockerLocalAPI)
 		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
 		if IsDevWebApp() {
@@ -73,7 +74,7 @@ func GenerateDeployConfigs(ctx CancelableContext, dockerAllowed bool) {
 		}
 
 		// adding overlays
-		overlaysDir := EnsureDir(nil, Config().Deploying.Dir, "overlays")
+		overlaysDir := core.EnsureDir(Config().Deploying.Dir, "overlays")
 		addOverlay(overlaysDir, "dev", nil)
 		if IsDevWebApp() {
 			addOverlay(overlaysDir, "local", [][]string{{"patch-no-web-container.yaml", templates.NoWebContainerPatch}})
@@ -111,7 +112,7 @@ func GenerateDeployConfigs(ctx CancelableContext, dockerAllowed bool) {
 // adding an overlay with its name; each patch should be at least: [0]: the filename, [1]: the template;
 // [2], [3], etc, are string format parameters to fill the "%s" placeholders in the template.
 func addOverlay(overlaysDir, overlayName string, patches [][]string) {
-	overlay := EnsureDir(nil, overlaysDir, overlayName)
+	overlay := core.EnsureDir(overlaysDir, overlayName)
 
 	// handling the patches at first
 	kustomizationPatches := ""
@@ -120,7 +121,7 @@ func addOverlay(overlaysDir, overlayName string, patches [][]string) {
 		for _, patch := range patches {
 			// adding the patch to the kustomization file
 			if len(patch) < 2 {
-				Fatal(nil, "Patches should be provided as at least 1 filename, and 1 template")
+				core.PanicMsg("Patches should be provided as at least 1 filename, and 1 template")
 			}
 			filename := patch[0]
 			template := patch[1]

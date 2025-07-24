@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aldesgroup/aldev/utils"
+	core "github.com/aldesgroup/corego"
 	"github.com/fsnotify/fsnotify"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/cobra"
@@ -44,6 +45,7 @@ var aldevCmd = &cobra.Command{
 var (
 	// flags
 	cfgFileName    string
+	cacheDir       string
 	verbose        bool
 	swapCode       bool
 	disableConfgen bool
@@ -53,6 +55,7 @@ var (
 func init() {
 	// common arguments, for the "aldev" command for also all its subcommands
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
+	aldevCmd.PersistentFlags().StringVarP(&cacheDir, "cache", "k", "../tmp", "aldev cache folder")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
 
 	// arguments for the "aldev" command only
@@ -74,6 +77,7 @@ func GetAldevCmd() *cobra.Command {
 // and reads the content of the YAML aldev config file into a variable
 func ReadCommonArgsAndConfig() {
 	utils.SetVerbose(verbose)
+	utils.SetCacheDir(cacheDir)
 	utils.ReadConfig(cfgFileName)
 }
 
@@ -83,6 +87,7 @@ func ReadCommonArgsAndConfig() {
 // ----------------------------------------------------------------------------
 
 func aldevRun(command *cobra.Command, args []string) {
+
 	// Reading this command's arguments, and reading the aldev YAML config file
 	ReadCommonArgsAndConfig()
 
@@ -93,6 +98,9 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(2000, nil)
+
+	// Handling panics
+	utils.Recover(aldevCtx, "Running the main Aldev loop")
 
 	// --- one-time stuff
 
@@ -150,7 +158,7 @@ func aldevRun(command *cobra.Command, args []string) {
 				}
 
 			case errWatcher := <-watcher.Errors:
-				utils.FatalIfErr(aldevCtx, errWatcher)
+				core.PanicIfErr(errWatcher)
 			}
 		}
 	}()

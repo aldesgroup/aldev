@@ -6,6 +6,7 @@ package utils
 
 import (
 	"github.com/aldesgroup/aldev/templates"
+	core "github.com/aldesgroup/corego"
 )
 
 const (
@@ -14,15 +15,15 @@ const (
 
 // Installing Git hooks to unify our practices
 func InstallGitHooks(ctx CancelableContext) {
-	if _, exists := DirExists(".git"); exists {
+	if core.DirExists(".git") {
 		pcFile := ".git/hooks/pre-commit"
 		EnsureFileFromTemplate(pcFile, templates.GitHookPRECOMMIT, TagHOTSWAPPED)
-		if !IsWindows() {
+		if !core.IsWindows() {
 			Run("Activating the pre-commit hook", ctx, false, "chmod +x %s", pcFile)
 		}
 		cmFile := ".git/hooks/commit-msg"
 		EnsureFileFromTemplate(cmFile, templates.GitHookCOMMITMSG)
-		if !IsWindows() {
+		if !core.IsWindows() {
 			Run("Activating the commit-msg hook", ctx, false, "chmod +x %s", cmFile)
 		}
 	}

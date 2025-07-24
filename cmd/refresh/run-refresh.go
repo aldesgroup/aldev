@@ -46,5 +46,6 @@ func aldevRefreshRun(command *cobra.Command, args []string) {
 	utils.DownloadExternalResources(aldevCtx)
 
 	// creates the required symlinks
-	utils.CreateMissingSymlinks(aldevCtx)
+	// TODO remove if not used - but could probably be used for linting
+	// utils.CreateMissingSymlinks(aldevCtx)
 }

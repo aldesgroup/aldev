@@ -7,6 +7,7 @@ import (
 
 	"github.com/aldesgroup/aldev/cmd"
 	"github.com/aldesgroup/aldev/utils"
+	core "github.com/aldesgroup/corego"
 	"github.com/spf13/cobra"
 )
 
@@ -57,12 +58,12 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 
 	// control
 	if utils.GetBinDir() == "" {
-		utils.Fatal(nil, "Aldev config item `.api.bindir` (relative path for the temp folder)  or `.lib.bindir` (if library) is empty!")
+		core.PanicMsg("Aldev config item `.api.bindir` (relative path for the temp folder)  or `.lib.bindir` (if library) is empty!")
 	}
 
 	// repeated commands
 	execExt := ""
-	if utils.IsWindows() {
+	if core.IsWindows() {
 		execExt = ".exe"
 	}
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local%s ./main", utils.GetBinDir(), utils.Config().AppName, execExt)
@@ -122,7 +123,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// under Windows, the executable for codegen and API serving is not the same - we need to build the executable for the containers
-	if utils.IsWindows() && !noContainer && codeHasChanged() {
+	if core.IsWindows() && !noContainer && codeHasChanged() {
 		secondaryCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", utils.GetBinDir(), utils.Config().AppName)
 		utils.Run("Compiling for Docker (Linux)", completeCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd)
 	}
@@ -138,5 +139,5 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 const dirtyFILENAME = "dirty"
 
 func codeHasChanged() bool {
-	return string(utils.ReadFile(nil, path.Join(utils.GetGoSrcDir(), utils.GetBinDir(), dirtyFILENAME), false)) == "true"
+	return string(core.ReadFile(path.Join(utils.GetGoSrcDir(), utils.GetBinDir(), dirtyFILENAME), false)) == "true"
 }

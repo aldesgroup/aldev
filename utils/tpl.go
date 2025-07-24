@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"text/template"
+
+	core "github.com/aldesgroup/corego"
 )
 
 func EnsureFileFromTemplate(filepath, tpl string, params ...any) {
@@ -19,13 +21,13 @@ func EnsureFileFromTemplate(filepath, tpl string, params ...any) {
 
 	// Create a new template
 	tmpl, errTpl := template.New(filepath).Parse(content)
-	FatalIfErr(nil, errTpl)
+	core.PanicIfErr(errTpl)
 
 	// Create a new file to write the result
 	outputFile, errCreate := os.Create(filepath)
-	FatalIfErr(nil, errCreate)
+	core.PanicIfErr(errCreate)
 	defer outputFile.Close()
 
 	// Execute the template with the data
-	FatalIfErr(nil, tmpl.Execute(outputFile, Config()))
+	core.PanicIfErr(tmpl.Execute(outputFile, Config()))
 }

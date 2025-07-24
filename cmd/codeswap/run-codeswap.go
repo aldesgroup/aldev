@@ -11,6 +11,7 @@ import (
 
 	"github.com/aldesgroup/aldev/cmd"
 	"github.com/aldesgroup/aldev/utils"
+	core "github.com/aldesgroup/corego"
 	"github.com/fsnotify/fsnotify"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/cobra"
@@ -81,7 +82,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 	// making sure we'll roll the changes back at the end
 	defer func() {
 		// let's stop the watching right away
-		utils.FatalIfErr(aldevCtx, watcher.Close())
+		core.PanicIfErr(watcher.Close())
 
 		// TODO like in Aldev, wait for this to be done instead of sleeping
 		time.Sleep(10 * time.Millisecond)
@@ -114,7 +115,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 						sets, watchedFolders = getWatchedFilesAndFolders(aldevCtx)
 
 						// adding a watcher to detect some file changes
-						utils.FatalIfErr(aldevCtx, watcher.Close()) // closing the old one
+						core.PanicIfErr(watcher.Close()) // closing the old one
 						watcher = utils.WatcherFor(watchedFolders...)
 
 						// let's wait a bit here than the FS has finished doing it's stuff
@@ -126,7 +127,7 @@ func aldevSwapRun(command *cobra.Command, args []string) {
 				}
 
 			case errWatcher := <-watcher.Errors:
-				utils.FatalIfErr(aldevCtx, errWatcher)
+				core.PanicIfErr(errWatcher)
 			}
 		}
 	}()
@@ -161,8 +162,10 @@ func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish boo
 	time.Sleep(50 * time.Millisecond)
 
 	// syncing the Go.sum file with the swaps done
-	goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
-	utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
+	if utils.Config().API != nil {
+		goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
+		utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
+	}
 }
 
 // a set associates a swap config, and the files that should be modified according to it
@@ -193,7 +196,7 @@ func getWatchedFilesAndFolders(ctx utils.CancelableContext) (sets []*swapSet, wa
 // gathering all the files corresponding to the same swap config
 func (thisSet *swapSet) buildFrom(ctx utils.CancelableContext, dir string) *swapSet {
 	entries, errDir := os.ReadDir(dir)
-	utils.FatalIfErr(ctx, errDir)
+	core.PanicIfErr(errDir)
 
 	for _, entry := range entries {
 		filename := path.Join(dir, entry.Name())
@@ -231,7 +234,7 @@ func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
 		utils.Debug("Checking for swaps to do in file: %s", filename)
 		// reading the current file
 		contentBytes, errRead := os.ReadFile(filename)
-		utils.FatalIfErr(ctx, errRead)
+		core.PanicIfErr(errRead)
 		contentString := string(contentBytes)
 
 		// the text obtained at the end
@@ -257,7 +260,7 @@ func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
 				direction = "reverse"
 			}
 			utils.Info("File %s is being %s-swapped", filename, direction)
-			utils.WriteStringToFile(ctx, filename, "%s", modifiedText)
+			core.WriteStringToFile(filename, "%s", modifiedText)
 		}
 	}
 }
