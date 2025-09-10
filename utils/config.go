@@ -88,7 +88,8 @@ type I18nConfig struct {
 
 type VendorConfig struct {
 	Repo    string // the repo of the external project
-	Version string // the maximal version to fetch; can also be the "latest"
+	Branch  string // the branch to use; if provided, then the version is ignored
+	Version string // the maximal version (tag) to fetch; can also be the "latest"
 	From    string // the path inside the repo to copy; if void, then all the repo is copied
 	To      string // the place where to paste the copied cod
 }

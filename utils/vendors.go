@@ -73,9 +73,21 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig) {
 			"git clone git@%s:%s.git", vendor.Repo[:firstSlashIndex], vendor.Repo[firstSlashIndex+1:]) // TODO handle https for public repos
 	}
 
+	// switch branch, if one if specified
+	if vendor.Branch != "" {
+		Run("checking out the '"+vendor.Branch+"' branch",
+			NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoCachePath),
+			false,
+			"git checkout %s", vendor.Branch)
+		Run("refreshing the branch's code",
+			NewBaseContext().WithStdErrWriter(io.Discard).WithExecDir(repoCachePath).WithStdOutWriter(io.Discard),
+			false,
+			"git pull")
+	}
+
 	// get the latest version
 	allVersions := strings.Split(string(RunAndGet("Getting the latest version", repoCachePath, false, "git tag -l --sort -version:refname")), "\n")
-	latestVersion := &versionObject{Value: allVersions[0], Commit: lastCommit(repoCachePath, "main")}
+	latestVersion := &versionObject{Value: allVersions[0], Commit: lastCommit(repoCachePath, core.IfThenElse(vendor.Branch != "", vendor.Branch, "main"))}
 
 	// the target directory
 	vendorDir := core.EnsureDir(vendor.To, repoName)
@@ -102,7 +114,8 @@ func fetchVendor(ctx CancelableContext, vendor *VendorConfig) {
 		if currentVersion == nil || currentVersion.Value != vendor.Version {
 			// checking the required version exists!
 			if !core.InSlice(allVersions, vendor.Version) {
-				core.PanicMsg("Required version '%s' does not exist in project '%s'", vendor.Version, repoName)
+				core.PanicMsg("Required version '%s' does not exist in project '%s'. Here are the available versions: %s",
+					vendor.Version, repoName, strings.Join(allVersions, "\n"))
 			}
 
 			// checking out the required version
