@@ -44,12 +44,13 @@ var aldevCmd = &cobra.Command{
 
 var (
 	// flags
-	cfgFileName    string
-	cacheDir       string
-	verbose        bool
-	swapCode       bool
-	disableConfgen bool
-	noContainer    bool
+	cfgFileName         string
+	cacheDir            string
+	verbose             bool
+	swapCode            bool
+	disableConfgen      bool
+	noContainer         bool
+	refreshTranslations bool
 )
 
 func init() {
@@ -63,6 +64,8 @@ func init() {
 		"use swapping of code, to use the local version of some dependencies for instance")
 	aldevCmd.Flags().BoolVarP(&disableConfgen, "disable-confgen", "d", false, "disable the generation of all the config files")
 	// aldevCmd.Flags().BoolVarP(&noContainer, "no-container", "n", false, "deploys the app without Kubernetes nor any container, for quick dev & testing")
+	aldevCmd.Flags().BoolVarP(&refreshTranslations, "translations", "t", false,
+		"if true, then the translations are also refreshed, which they are not by default")
 }
 
 // ----------------------------------------------------------------------------
@@ -185,7 +188,7 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	utils.ReadConfig(cfgFileName)
 
 	// proceed to download the needed external resources
-	utils.DownloadExternalResources(ctx)
+	utils.DownloadExternalResources(ctx, refreshTranslations)
 
 	// in library mode, there no need for k8s, deployments, env vars, etc.
 	if utils.IsDevLibrary() {

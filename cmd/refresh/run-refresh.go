@@ -20,12 +20,14 @@ var aldevRefreshCmd = &cobra.Command{
 }
 
 var (
-// no specific argument for now
+	withTranslations bool
 )
 
 func init() {
 	// linking to the root command
 	cmd.GetAldevCmd().AddCommand(aldevRefreshCmd)
+	aldevRefreshCmd.Flags().BoolVarP(&withTranslations, "translations", "t", false,
+		"if true, then the translations are also refreshed, which they are not by default")
 }
 
 // ----------------------------------------------------------------------------
@@ -43,7 +45,7 @@ func aldevRefreshRun(command *cobra.Command, args []string) {
 	// TODO add -deps to include go get -u -v ./main && git commit && git push
 
 	// downloading various external resource in parallel
-	utils.DownloadExternalResources(aldevCtx)
+	utils.DownloadExternalResources(aldevCtx, withTranslations)
 
 	// creates the required symlinks
 	// TODO remove if not used - but could probably be used for linting

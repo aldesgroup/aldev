@@ -10,7 +10,7 @@ import (
 )
 
 // Downloading external resources, like translations, vendors, etc
-func DownloadExternalResources(ctx CancelableContext) {
+func DownloadExternalResources(ctx CancelableContext, withTranslations bool) {
 	// making sure the cache folder exists if we need it
 	if len(Config().Vendors) > 0 {
 		core.EnsureDir(GetCacheDir())
@@ -20,7 +20,9 @@ func DownloadExternalResources(ctx CancelableContext) {
 	wg := new(sync.WaitGroup)
 
 	// proceed to download external resources
-	goRoutine(wg, downloadAllTranslationsFromGoogle, ctx)
+	if withTranslations {
+		goRoutine(wg, downloadAllTranslationsFromGoogle, ctx)
+	}
 
 	// proceed to download external resources
 	goRoutine(wg, fetchVendoredLibraries, ctx)
