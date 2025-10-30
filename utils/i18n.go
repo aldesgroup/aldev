@@ -81,8 +81,7 @@ func downloadTranslationsForApp(destDir string, part string, i18nCfg *I18nConfig
 		header := gooTranslations.Values[0]
 		namespaceCol := 0
 		keyCol := 1
-		// hint := 2 // not using it here
-		valueColStart := 3
+		valueColStart := 2
 
 		// getting the outbounds
 		lastCol := len(header) - 1
