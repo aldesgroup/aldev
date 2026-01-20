@@ -34,8 +34,11 @@ func QuickRun(whyRunThis string, commandAsString string, params ...any) {
 func RunAndGet(whyRunThis string, execDir string, logStart bool, commandAsString string, params ...any) []byte {
 	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
 	buffer := new(bytes.Buffer)
-	runCmd(whyRunThis, NewBaseContext().WithStdOutWriter(buffer).WithExecDir(execDir),
-		logStart, exec.Command(commandElements[0], commandElements[1:]...))
+	ctx := NewBaseContext().WithStdOutWriter(buffer).WithExecDir(execDir).WithAllowFailure(true)
+	if !verbose {
+		ctx.WithStdErrWriter(io.Discard)
+	}
+	runCmd(whyRunThis, ctx, logStart, exec.Command(commandElements[0], commandElements[1:]...))
 	return buffer.Bytes()
 }
 

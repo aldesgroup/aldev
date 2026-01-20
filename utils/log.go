@@ -9,9 +9,7 @@ import (
 	"strings"
 )
 
-var (
-	verbose bool
-)
+var verbose bool
 
 func SetVerbose(isVerbose bool) {
 	verbose = isVerbose
