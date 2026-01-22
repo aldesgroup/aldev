@@ -125,7 +125,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	// under Windows, the executable for codegen and API serving is not the same - we need to build the executable for the containers
 	if core.IsWindows() && !noContainer && codeHasChanged() {
 		secondaryCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", utils.GetBinDir(), utils.Config().AppName)
-		utils.Run("Compiling for Docker (Linux)", completeCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd)
+		utils.Run("Compiling for containerization (Linux)", completeCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd)
 	}
 
 	// bit of logging

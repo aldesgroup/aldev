@@ -21,11 +21,11 @@ func DownloadExternalResources(ctx CancelableContext, withTranslations bool) {
 
 	// proceed to download external resources
 	if withTranslations {
-		goRoutine(wg, downloadAllTranslationsFromGoogle, ctx)
+		wg.Go(func() { downloadAllTranslationsFromGoogle(ctx) })
 	}
 
 	// proceed to download external resources
-	goRoutine(wg, fetchVendoredLibraries, ctx)
+	wg.Go(func() { fetchVendoredLibraries(ctx) })
 
 	// waiting here for all the tasks to be finished
 	wg.Wait()

@@ -66,11 +66,11 @@ func GenerateDeployConfigs(ctx CancelableContext, dockerAllowed bool) {
 
 		// docker files
 		dockerDir := core.EnsureDir(Config().Deploying.Dir, "docker")
-		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-api-docker"), templates.DockerLocalAPI)
-		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-api-docker"), templates.DockerRemoteAPI)
+		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-api-docker"), templates.ContainerLocalAPI)
+		EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-api-docker"), templates.ContainerRemoteAPI)
 		if IsDevWebApp() {
-			EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-web-docker"), templates.DockerLocalWEB)
-			EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-web-docker"), templates.DockerRemoteWeb)
+			EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-local-web-docker"), templates.ContainerLocalWEB)
+			EnsureFileFromTemplate(path.Join(dockerDir, Config().AppName+"-remote-web-docker"), templates.ContainerRemoteWeb)
 		}
 
 		// adding overlays

@@ -105,11 +105,6 @@ type CodeSwapsConfig struct {
 	}
 }
 
-// type SymlinkConfig struct {
-// 	Link string // what to link
-// 	As   string // how to link it
-// }
-
 type JobConfig struct {
 	Description string       // a short description of the job
 	Cmds        []*CmdConfig // a list of commands to run

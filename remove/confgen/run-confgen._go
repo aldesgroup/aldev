@@ -14,7 +14,7 @@ import (
 var aldevConfgenCmd = &cobra.Command{
 	Use:   "confgen",
 	Short: "Generates config files, used notably for local & remote deployment",
-	Long:  "Generates the Tiltfile, Docker & Kustomization files, and an .env-list for web app development",
+	Long:  "Generates the Tiltfile, container files, and an .env-list for web app development",
 	Run:   aldevConfgenRun,
 }
 

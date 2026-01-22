@@ -35,7 +35,7 @@ func Execute() {
 // aldevCmd represents the base command when called without any subcommands
 var aldevCmd = &cobra.Command{
 	Use:   "aldev",
-	Short: "Quick dev with Goald, GoaldR and / GoaldN, & Docker / Kubernetes",
+	Short: "Quick dev with Goald, GoaldR and / GoaldN, & containers",
 	Long: "Run `aldev` to start or continue developing a Goald / GoaldR or GoaldN application, " +
 		"with automatic deployment in a local k8s cluster and live reloading when applicable. " +
 		"Or use one of the available command to perform a specific action.",
@@ -90,7 +90,6 @@ func ReadCommonArgsAndConfig() {
 // ----------------------------------------------------------------------------
 
 func aldevRun(command *cobra.Command, args []string) {
-
 	// Reading this command's arguments, and reading the aldev YAML config file
 	ReadCommonArgsAndConfig()
 
@@ -190,27 +189,32 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	// proceed to download the needed external resources
 	utils.DownloadExternalResources(ctx, refreshTranslations)
 
-	// in library mode, there no need for k8s, deployments, env vars, etc.
-	if utils.IsDevLibrary() {
-		utils.QuickRun("Installing / refreshing the dev environment", "%s", utils.Config().Lib.Install)
-		utils.Run("Developing the lib", ctx, true, "%s", utils.Config().Lib.Develop)
+	// TODO rework all this - library & API al-development
 
-		// Wait for the context to be canceled or the program to exit
-		<-ctx.Done()
+	// // in library mode, there no need for k8s, deployments, env vars, etc.
+	// if utils.IsDevLibrary() {
+	// 	utils.QuickRun("Installing / refreshing the dev environment", "%s", utils.Config().Lib.Install)
+	// 	utils.Run("Developing the lib", ctx, true, "%s", utils.Config().Lib.Develop)
 
-	} else if utils.IsDevAPI() {
-		// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
+	// 	// Wait for the context to be canceled or the program to exit
+	// 	<-ctx.Done()
 
-		// Generating config files for deploying the app locally, CI / CD, etc.
-		if !disableConfgen {
-			utils.GenerateDeployConfigs(ctx, !noContainer)
-		}
+	// } else if utils.IsDevAPI() {
+	// 	// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
 
-		// Ready for launch
-		if noContainer {
-			utils.DeployWithNoContainer(ctx)
-		} else {
-			utils.DeployToLocalCluster(ctx)
-		}
+	// 	// Generating config files for deploying the app locally, CI / CD, etc.
+	// 	if !disableConfgen {
+	// 		utils.GenerateDeployConfigs(ctx, !noContainer)
+	// 	}
+
+	// 	// Ready for launch
+	// 	if noContainer {
+	// 		utils.DeployWithNoContainer(ctx)
+	// 	} else {
+	// 		utils.DeployToLocalCluster(ctx)
+	// 	}
+	// }
+
+	if utils.IsDevNative() {
 	}
 }
