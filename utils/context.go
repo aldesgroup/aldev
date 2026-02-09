@@ -13,8 +13,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	core "github.com/aldesgroup/corego"
 )
 
 // ----------------------------------------------------------------------------
@@ -52,10 +50,10 @@ type baseCancelableContext struct {
 	shortCommands bool
 	stdoutWriter  io.Writer
 	stderrWriter  io.Writer
-	errLogFn      errLogFn
 	envVars       []string
 	reRun         bool
 	allowFailure  bool
+	// errLogFn      errLogFn
 }
 
 func NewBaseContext() *baseCancelableContext {
@@ -66,7 +64,8 @@ func NewBaseContext() *baseCancelableContext {
 
 func newBaseCancelableContext() *baseCancelableContext {
 	ctx, cancelFn := context.WithCancel(context.Background())
-	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil, false, false}
+	// return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, nil, false, false}
+	return &baseCancelableContext{ctx, cancelFn, "", false, nil, nil, nil, false, false}
 }
 
 func (thisCtx *baseCancelableContext) WithExecDir(dirElems ...string) CancelableContext {
@@ -99,18 +98,18 @@ func (thisCtx *baseCancelableContext) getStdErrWriter() io.Writer {
 	return thisCtx.stderrWriter
 }
 
-func (thisCtx *baseCancelableContext) WithErrLogFn(errLogFn errLogFn) CancelableContext {
-	thisCtx.errLogFn = errLogFn
-	return thisCtx
-}
+// func (thisCtx *baseCancelableContext) WithErrLogFn(errLogFn errLogFn) CancelableContext {
+// 	thisCtx.errLogFn = errLogFn
+// 	return thisCtx
+// }
 
-func (thisCtx *baseCancelableContext) getErrLogFn() errLogFn {
-	if thisCtx.errLogFn != nil {
-		return thisCtx.errLogFn
-	}
+// func (thisCtx *baseCancelableContext) getErrLogFn() errLogFn {
+// 	if thisCtx.errLogFn != nil {
+// 		return thisCtx.errLogFn
+// 	}
 
-	return core.PanicMsg
-}
+// 	return core.PanicMsg
+// }
 
 func (thisCtx *baseCancelableContext) WithEnvVars(envVars ...string) CancelableContext {
 	thisCtx.envVars = envVars

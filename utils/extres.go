@@ -24,8 +24,10 @@ func DownloadExternalResources(ctx CancelableContext, withTranslations bool) {
 		wg.Go(func() { downloadAllTranslationsFromGoogle(ctx) })
 	}
 
-	// proceed to download external resources
-	wg.Go(func() { fetchVendoredLibraries(ctx) })
+	// proceed to download external resources - which only happens for JS/TS libs
+	if IsDevNative() || IsDevWebApp() {
+		wg.Go(func() { fetchVendoredLibraries(ctx) })
+	}
 
 	// waiting here for all the tasks to be finished
 	wg.Wait()

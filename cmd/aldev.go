@@ -44,28 +44,28 @@ var aldevCmd = &cobra.Command{
 
 var (
 	// flags
-	cfgFileName         string
-	cacheDir            string
-	verbose             bool
-	swapCode            bool
-	disableConfgen      bool
-	noContainer         bool
-	refreshTranslations bool
+	cfgFileName    string
+	cacheDir       string
+	verbose        bool
+	onlyAPI        bool
+	swapCode       bool
+	disableConfgen bool
+	disableI18nDL  bool
 )
 
 func init() {
-	// common arguments, for the "aldev" command for also all its subcommands
+	// common arguments, for the "aldev" command but also all its subcommands
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
 	aldevCmd.PersistentFlags().StringVarP(&cacheDir, "cache", "k", "../tmp", "aldev cache folder")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
+	aldevCmd.PersistentFlags().BoolVarP(&onlyAPI, "api-only", "a", false, "builds & runs only the API part, if present")
 
 	// arguments for the "aldev" command only
 	aldevCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
 		"use swapping of code, to use the local version of some dependencies for instance")
-	aldevCmd.Flags().BoolVarP(&disableConfgen, "disable-confgen", "d", false, "disable the generation of all the config files")
-	// aldevCmd.Flags().BoolVarP(&noContainer, "no-container", "n", false, "deploys the app without Kubernetes nor any container, for quick dev & testing")
-	aldevCmd.Flags().BoolVarP(&refreshTranslations, "translations", "t", false,
-		"if true, then the translations are also refreshed, which they are not by default")
+	aldevCmd.Flags().BoolVarP(&disableConfgen, "disable-confgen", "c", false, "disable the generation of all the config files")
+	aldevCmd.Flags().BoolVarP(&disableI18nDL, "disable-i18n-dl", "i", false,
+		"if true, then the translations are not refreshed, which they are by default")
 }
 
 // ----------------------------------------------------------------------------
@@ -81,6 +81,7 @@ func GetAldevCmd() *cobra.Command {
 func ReadCommonArgsAndConfig() {
 	utils.SetVerbose(verbose)
 	utils.SetCacheDir(cacheDir)
+	utils.SetOnlyAPI(onlyAPI)
 	utils.ReadConfig(cfgFileName)
 }
 
@@ -93,10 +94,10 @@ func aldevRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	ReadCommonArgsAndConfig()
 
-	// also valueing here, since the source of truth must lie in the utils package
-	if swapCode {
-		utils.UseCodeSwaps()
-	}
+	// // also valueing here, since the source of truth must lie in the utils package
+	// if swapCode {
+	// 	utils.UseCodeSwaps()
+	// }
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(2000, nil)
@@ -187,7 +188,7 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	utils.ReadConfig(cfgFileName)
 
 	// proceed to download the needed external resources
-	utils.DownloadExternalResources(ctx, refreshTranslations)
+	utils.DownloadExternalResources(ctx, !disableI18nDL)
 
 	// TODO rework all this - library & API al-development
 
@@ -202,10 +203,10 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	// } else if utils.IsDevAPI() {
 	// 	// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
 
-	// 	// Generating config files for deploying the app locally, CI / CD, etc.
-	// 	if !disableConfgen {
-	// 		utils.GenerateDeployConfigs(ctx, !noContainer)
-	// 	}
+	// Generating config files for deploying the app locally, CI / CD, etc.
+	if !disableConfgen {
+		utils.GenerateDeployFiles(ctx)
+	}
 
 	// 	// Ready for launch
 	// 	if noContainer {
@@ -216,5 +217,11 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	// }
 
 	if utils.IsDevNative() {
+		// nothing for now, but there will be something FOR SURE
+	}
+
+	if utils.IsDevAPI() {
+		// TODO podman config
+		utils.RunAPI(ctx)
 	}
 }

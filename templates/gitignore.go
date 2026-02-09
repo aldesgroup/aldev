@@ -4,7 +4,6 @@ const GitIgnore = `# no hidden file
 .*
 
 # except these
-!.dockerignore
 !.gitignore
 !.aldev.yaml
 !.gitkeep

@@ -6,6 +6,7 @@ package utils
 import (
 	"os"
 	"path"
+	"strings"
 
 	core "github.com/aldesgroup/corego"
 	"gopkg.in/yaml.v3"
@@ -26,10 +27,6 @@ func Config() *AldevConfig {
 }
 
 func GetCacheDir() string {
-	// if cacheDirectory == "" {
-	// 	cacheDirectory = "../tmp"
-	// }
-
 	return cacheDirectory
 }
 
@@ -41,21 +38,23 @@ type AldevConfig struct {
 	AppName   string    // the name of the app - beware: the key has to be "appname" in the YAML file
 	Languages string    // the languages available for this app, seperated by a comma - for example: en,fr,it,de,zh,es
 	Lib       *struct { // must be filled if this project is a library
-		SrcDir         string // where the library source code can be found
-		Config         string // the path to the config file for the API, from the API's folder
-		Install        string // command that should be run to install stuff, like needed dependencies, etc.
-		Develop        string // command that should be run to allow for continuously developping & building the library
-		BinDir         string // the directory where to find the library's compiled binary, as seen from the library source folder (srcdir)
-		resolvedBinDir string // the bin directory as seen from the project's root
+		SrcDir         string   // where the library source code can be found
+		Config         string   // the path to the config file for the API, from the API's folder
+		Install        string   // command that should be run to install stuff, like needed dependencies, etc.
+		Develop        string   // command that should be run to allow for continuously developping & building the library
+		BinDir         string   // the directory where to find the library's compiled binary, as seen from the library source folder (srcdir)
+		WatchAlso      []string // the additional folders / files to watch when rebuilding the code
+		resolvedBinDir string   // the bin directory as seen from the project's root
 	}
 	API *struct { // must be filled if there's an API
-		SrcDir         string // where the API's Goald-based code should be found
-		Config         string // the path to the config file for the API, from the API's folder
-		Port           int    // the port used to expose the whole load-balanced API service
-		I18n           *I18nConfig
-		DataDir        string // where to find bootstraping data to run the app
-		BinDir         string // the directory where to find the API's compiled binary, as seen from the API source folder (srcdir)
-		resolvedBinDir string // the bin directory as seen from the project's root
+		SrcDir         string      // where the API's Goald-based code should be found
+		Config         string      // the path to the config file for the API, from the API's folder
+		Port           int         // the port used to expose the whole load-balanced API service
+		I18n           *I18nConfig // how to translate the API's outputs
+		DataDir        string      // where to find bootstraping data to run the app
+		BinDir         string      // the directory where to find the API's compiled binary, as seen from the API source folder (srcdir)
+		WatchAlso      []string    // the additional folders / files to watch when rebuilding the code
+		resolvedBinDir string      // the bin directory as seen from the project's root
 	}
 	// APIOnly bool      // if true, then no web app is handled
 	Web *struct { // must be filled if there's a web app
@@ -79,6 +78,10 @@ type AldevConfig struct {
 	}
 	CodeSwaps []*CodeSwapsConfig // Automatically, temporarily swapping bits of code
 	Jobs      []*JobConfig       // Jobs to run
+
+	// Computed fields
+	AppNameShort string
+	AppNameKebab string
 }
 
 type I18nConfig struct {
@@ -125,6 +128,15 @@ func GetGoSrcDir() string {
 	return Config().API.SrcDir
 }
 
+// returns the name of the files / folders where to find additional Go source code to watch for change
+func GetGoAdditionalWatchedPaths() []string {
+	if IsDevLibrary() {
+		return Config().Lib.WatchAlso
+	}
+
+	return Config().API.WatchAlso
+}
+
 func GetBinDir() string {
 	if IsDevLibrary() {
 		return Config().Lib.BinDir
@@ -165,6 +177,10 @@ func ReadConfig(cfgFileName string) {
 			Value: config.Languages,
 		})
 	}
+
+	// Dealing with the computed names
+	config.AppNameShort = strings.ToLower(core.ToAcronym(config.AppName))
+	config.AppNameKebab = core.PascalToKebab(config.AppName)
 }
 
 // computed property on an Aldev config object

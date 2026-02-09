@@ -162,7 +162,7 @@ func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish boo
 	time.Sleep(50 * time.Millisecond)
 
 	// syncing the Go.sum file with the swaps done
-	if utils.Config().API != nil {
+	if utils.Config().API != nil || utils.Config().Lib != nil {
 		goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
 		utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
 	}
@@ -228,7 +228,7 @@ const inlineComment = " /* " + utils.TagHOTSWAPPED + " do not commit! */"
 const eofComment = " // " + utils.TagHOTSWAPPED + " do not commit!"
 
 // writing all the swaps for the files of the given set
-func (thisSet *swapSet) doSwaps(ctx utils.CancelableContext, rollback bool) {
+func (thisSet *swapSet) doSwaps(_ utils.CancelableContext, rollback bool) {
 	// performing the swaps for all the files of this set
 	for _, filename := range thisSet.files {
 		utils.Debug("Checking for swaps to do in file: %s", filename)

@@ -1,0 +1,11 @@
+# yeah, aldev is used to dev itself :)
+appname: aldev
+lib:
+  srcdir: .
+codeswaps:
+  - from: "."
+    for: ["*.mod"]
+    do:
+        - replace: "// replace github.com/aldesgroup/corego => ../../open/corego"
+          with: "replace github.com/aldesgroup/corego => ../../open/corego"
+          eofcom: true

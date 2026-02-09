@@ -113,7 +113,7 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	utils.Run("removing the .git folder", cachedProjCtx, false, "%s", core.RemoveCmd()+" .git")
 
 	// some replacements to customize the project
-	// TODO handle custom api / webapp name,ls
+	// TODO handle custom api / webapp name
 
 	// TODO + git target repo instead of just project name, to handle auto git init & push
 	// core.ReplaceInFile(path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{"devotion--template": projectNamePascal})

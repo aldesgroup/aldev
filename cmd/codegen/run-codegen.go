@@ -66,9 +66,10 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	if core.IsWindows() {
 		execExt = ".exe"
 	}
-	mainCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local%s ./main", utils.GetBinDir(), utils.Config().AppName, execExt)
-	mainRunCmd := fmt.Sprintf("%s/%s-api-local%s -config %s -srcdir %s -bindir %s",
-		utils.Config().ResolvedBinDir(), utils.Config().AppName, execExt,
+	binName := core.PascalToKebab(utils.Config().AppName) + "-api"
+	mainCompileCmd := fmt.Sprintf("go build -o %s/%s%s ./main", utils.GetBinDir(), binName, execExt)
+	mainRunCmd := fmt.Sprintf("%s/%s%s -config %s -srcdir %s -bindir %s",
+		utils.Config().ResolvedBinDir(), binName, execExt,
 		path.Join(utils.GetGoSrcDir(), utils.GetConfigPath()),
 		utils.GetGoSrcDir(), path.Join(utils.GetGoSrcDir(), utils.GetBinDir()))
 	if utils.Config().Web != nil {
@@ -124,7 +125,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 
 	// under Windows, the executable for codegen and API serving is not the same - we need to build the executable for the containers
 	if core.IsWindows() && !noContainer && codeHasChanged() {
-		secondaryCompileCmd := fmt.Sprintf("go build -o %s/%s-api-local ./main", utils.GetBinDir(), utils.Config().AppName)
+		secondaryCompileCmd := fmt.Sprintf("go build -o %s/%s ./main", utils.GetBinDir(), binName)
 		utils.Run("Compiling for containerization (Linux)", completeCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd)
 	}
 
