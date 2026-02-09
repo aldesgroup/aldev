@@ -4,7 +4,6 @@
 package utils
 
 import (
-	"os"
 	"path"
 	"time"
 
@@ -113,9 +112,7 @@ func getWatchedFolders(givenPaths ...string) (watchedFolders []string) {
 				}
 
 				// adding subfolders
-				entries, errDir := os.ReadDir(givenPath)
-				core.PanicMsgIfErr(errDir, "Error while trying to read directory '%s'", givenPath)
-				for _, entry := range entries {
+				for _, entry := range core.EnsureReadDir(givenPath) {
 					watchedFolders = append(watchedFolders, getWatchedFolders(path.Join(givenPath, entry.Name()))...)
 				}
 			}

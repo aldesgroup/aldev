@@ -3,7 +3,7 @@ module github.com/aldesgroup/aldev
 go 1.25.7
 
 require (
-	github.com/aldesgroup/corego v0.0.0-20260209094542-8c60dd5a0e56
+	github.com/aldesgroup/corego v0.0.0-20260209142835-f55d4e6097c8
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spf13/cobra v1.10.2

@@ -1,5 +1,5 @@
-github.com/aldesgroup/corego v0.0.0-20260209094542-8c60dd5a0e56 h1:c9ob6whnJ52MH+6LiYemez6e8GfQDO+t2gE4kUvtoZc=
-github.com/aldesgroup/corego v0.0.0-20260209094542-8c60dd5a0e56/go.mod h1:yYwISjOTMwp4+sYuudCoCFidtLm4dDcBJcH2R+qp8mg=
+github.com/aldesgroup/corego v0.0.0-20260209142835-f55d4e6097c8 h1:XACwUKyGT1YPt1M43t2oh9rAnVAIkrODHylJc9oRV80=
+github.com/aldesgroup/corego v0.0.0-20260209142835-f55d4e6097c8/go.mod h1:yYwISjOTMwp4+sYuudCoCFidtLm4dDcBJcH2R+qp8mg=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=

@@ -195,10 +195,7 @@ func getWatchedFilesAndFolders(ctx utils.CancelableContext) (sets []*swapSet, wa
 
 // gathering all the files corresponding to the same swap config
 func (thisSet *swapSet) buildFrom(ctx utils.CancelableContext, dir string) *swapSet {
-	entries, errDir := os.ReadDir(dir)
-	core.PanicIfErr(errDir)
-
-	for _, entry := range entries {
+	for _, entry := range core.EnsureReadDir(dir) {
 		filename := path.Join(dir, entry.Name())
 		if entry.IsDir() {
 			if entry.Name() != "node_modules" && entry.Name() != ".git" && entry.Name() != "dist" && entry.Name() != "vendor" {
