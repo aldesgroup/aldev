@@ -14,7 +14,6 @@ import (
 var aldevConfgenCmd = &cobra.Command{
 	Use:   "confgen",
 	Short: "Generates config files, used notably for local & remote deployment",
-	Long:  "Generates the Tiltfile, container files, and an .env-list for web app development",
 	Run:   aldevConfgenRun,
 }
 
@@ -35,6 +34,6 @@ func aldevConfgenRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	cmd.ReadCommonArgsAndConfig()
 
-	// downloading various external resource in parallel
-	utils.GenerateDeployConfigs(nil, true)
+	// Generating all the deployment files
+	utils.GenerateDeployFiles(nil)
 }

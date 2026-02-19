@@ -12,15 +12,15 @@ const LocalCOMPOSE = `services:
     volumes:
       # Mounts the host's bin folder to the container.
       # The ':z' tells Podman to relabel the files for SELinux (essential on Fedora/RHEL)
-      - ../../bin:/api/bin:z
-      - ../../api:/api/api:z
-      - ../../data:/api/data:z
+      - ../../{{.ResolvedBinDir}}:/api/bin:z
+      - ../../{{.API.SrcDir}}:/api/src:z
+      - ../../{{.API.DataDir}}:/api/data:z
 
     # Executes the binary. Running it directly (not via a shell script) helps with signal handling (SIGTERM)
-    command: ./bin/{{.AppNameKebab}}-api -config api/apiconf.yaml
+    command: ./bin/{{.AppNameKebab}}-api -config src/{{.API.Config}}
 
   # Defines the Load Balancer
-  nginx:
+  {{.AppNameShort}}_lb:
     # Nginx micro-image maintained by the Fedora/Red Hat community on Quay
     # This is a hardened, small-footprint version of Nginx
     image: quay.io/nginx/nginx-unprivileged:latest

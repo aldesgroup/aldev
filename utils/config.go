@@ -180,6 +180,9 @@ func ReadConfig(cfgFileName string) {
 
 	// Dealing with the computed names
 	config.AppNameShort = strings.ToLower(core.ToAcronym(config.AppName))
+	if len(config.AppNameShort) < 2 {
+		config.AppNameShort = strings.ToLower(config.AppName[0:4])
+	}
 	config.AppNameKebab = core.PascalToKebab(config.AppName)
 }
 

@@ -40,6 +40,7 @@ var (
 	noWeb             bool
 	native            bool
 	asSubproject      bool
+	destination       string
 )
 
 func init() {
@@ -55,6 +56,8 @@ func init() {
 	aldevBootstrapCmd.Flags().BoolVarP(&noWeb, "web-less", "w", false, "does not create the Web part")
 	aldevBootstrapCmd.Flags().BoolVarP(&native, "mobile", "m", false, "create the native (mobile) part")
 	aldevBootstrapCmd.Flags().BoolVarP(&asSubproject, "as-subproject", "j", false, "allow to run `aldev boostrap` inside an existing git project")
+	aldevBootstrapCmd.Flags().StringVarP(&destination, "destination", "d", "", "generate the app into the targeted folder, instead of ./the-project-name "+
+		"(from --name TheProjectName); can be '.' to generate the app in the current folder")
 }
 
 // ----------------------------------------------------------------------------
@@ -173,7 +176,9 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	}
 
 	// moving it
-	utils.Run("moving the project", ctx.WithExecDir("."), false, core.MoveCmd()+" %s %s", path.Join(utils.GetCacheDir(), projectNameKebab), projectNameKebab)
+	projectDestination := core.IfThenElse(destination == "", projectNameKebab, destination)
+	// utils.Run("moving the project", ctx.WithExecDir("."), false, core.MoveCmd()+" %s %s", path.Join(utils.GetCacheDir(), projectNameKebab), projectDestination)
+	utils.Run("moving the project", ctx.WithExecDir("."), false, "rsync -a --remove-source-files %s/ %s/", path.Join(utils.GetCacheDir(), projectNameKebab), projectDestination)
 
 	// // tweaking the config
 	// if !noAPI {

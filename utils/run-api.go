@@ -132,10 +132,10 @@ func apiUp() {
 }
 
 func apiDown() {
-	// Nuking everything launched with Podman... That may be a little bit too much
-	// We'll prolly have to smooth that out sometimes later
-	QuickRun("Stopping the API (1/2)", "%s", "podman rm --all --force")
+	// // Nuking everything launched with Podman... That may be a little bit too much
+	// // We'll prolly have to smooth that out sometimes later
+	QuickRun("Stopping the API (1/2)", "podman rm --force --filter name=local_%s_", Config().AppNameShort)
 
-	// Also, making sure Podman's internal network is removed to be able to start from fresh later on
-	QuickRun("Stopping the API (2/2)", "%s", "podman network rm local_default")
+	// // Also, making sure Podman's internal network is removed to be able to start from fresh later on
+	// QuickRun("Stopping the API (2/2)", "%s", "podman network rm local_default")
 }
