@@ -39,6 +39,8 @@ var (
 	noAPI             bool
 	noWeb             bool
 	native            bool
+	asSubproject      bool
+	destination       string
 )
 
 func init() {
@@ -51,9 +53,11 @@ func init() {
 	aldevBootstrapCmd.Flags().StringVarP(&projectNamePascal, "name", "n", "", "the name of the project to create; should not contain any space, and be in PascalCase")
 	aldevBootstrapCmd.Flags().StringVarP(&templateLink, "template", "t", genericTemplate, "a link to a Git repo containing a Devotion project template, e.g. "+genericTemplate)
 	aldevBootstrapCmd.Flags().BoolVarP(&templatePrivate, "private", "p", false, "is the project template being used private?")
-	aldevBootstrapCmd.Flags().BoolVarP(&noAPI, "api-less", "a", false, "does not create the API part")
 	aldevBootstrapCmd.Flags().BoolVarP(&noWeb, "web-less", "w", false, "does not create the Web part")
 	aldevBootstrapCmd.Flags().BoolVarP(&native, "mobile", "m", false, "create the native (mobile) part")
+	aldevBootstrapCmd.Flags().BoolVarP(&asSubproject, "as-subproject", "j", false, "allow to run `aldev boostrap` inside an existing git project")
+	aldevBootstrapCmd.Flags().StringVarP(&destination, "destination", "d", "", "generate the app into the targeted folder, instead of ./the-project-name "+
+		"(from --name TheProjectName); can be '.' to generate the app in the current folder")
 }
 
 // ----------------------------------------------------------------------------
@@ -86,7 +90,7 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	defer utils.Recover(ctx, "Bootstrapping a new app called '%s' (project '%s')", projectNamePascal, projectNameKebab)
 
 	// checking the context
-	if core.DirExists(".git") {
+	if core.DirExists(".git") && !asSubproject {
 		core.PanicMsg("Cannot run this from an actual Git project")
 	}
 
@@ -107,16 +111,37 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 			"git clone https://%s %s", templateLink, projectNameKebab)
 	}
 
-	// removing the .git folder, and the .gitignore file
+	// going into this project
 	cachedProjDir := path.Join(utils.GetCacheDir(), projectNameKebab)
 	cachedProjCtx := ctx.WithExecDir(cachedProjDir)
+
+	// removing obvious stuff, for starters
 	utils.Run("removing the .git folder", cachedProjCtx, false, "%s", core.RemoveCmd()+" .git")
+	utils.Run("removing the deploy folder", cachedProjCtx, false, "%s deploy", core.RemoveCmd())
+	utils.Run("removing the README (for now)", cachedProjCtx, false, "%s README.md", core.RemoveCmd())
 
-	// some replacements to customize the project
-	// TODO handle custom api / webapp name,ls
+	// simple reading of the config - for real config loading, use utils.ReadConfig
+	configFilePath := path.Join(cachedProjDir, ".aldev.yaml")
+	conf := core.ReadFileFromYAML(configFilePath, &utils.AldevConfig{}, true)
 
+	// --- some replacements to customize the project
+
+	// TODO handle custom api / webapp name
 	// TODO + git target repo instead of just project name, to handle auto git init & push
-	// core.ReplaceInFile(path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{"devotion--template": projectNamePascal})
+
+	// --- in the project's root
+	core.ReplaceInFile(path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{conf.AppName: projectNamePascal})
+
+	// --- in the API
+	goModuleName := projectNameKebab
+	if !asSubproject {
+		panic("Main-project mode is not handled yet!")
+	}
+	templateModuleContent := core.ReadFile(path.Join(cachedProjDir, conf.API.SrcDir, "go.mod"), true)
+	templateModuleName := core.After(core.Before(string(templateModuleContent), "\n"), "module ")
+	core.ReplaceInFile(path.Join(cachedProjDir, conf.API.SrcDir, "go.mod"), map[string]string{templateModuleName: goModuleName})
+	core.ReplaceInFolder(path.Join(cachedProjDir, conf.API.SrcDir), ".go", map[string]string{templateModuleName: goModuleName})
+
 	// core.ReplaceInFile(path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{"apionly: false": "apionly: true"})
 	// core.ReplaceInFile(path.Join(cachedProjDir, "api", "go.mod"), map[string]string{"/libs/devotion--template": "/web/" + projectNamePascal})
 	// core.ReplaceInFile(path.Join(cachedProjDir, "api", "main", "1-start.go"), map[string]string{"/libs/devotion--template": "/web/" + projectNamePascal})
@@ -141,37 +166,38 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 
 	// trimming the clone as much as necessary, before moving it
 	if noAPI {
-		utils.Run("removing the API part", cachedProjCtx, false, "%s", core.RemoveCmd()+" api")
+		utils.Run("removing the API part", cachedProjCtx, false, "%s api", core.RemoveCmd())
 	}
 	if noWeb {
-		utils.Run("removing the Web part", cachedProjCtx, false, "%s", core.RemoveCmd()+" web")
+		utils.Run("removing the Web part", cachedProjCtx, false, "%s web", core.RemoveCmd())
 	}
 	if !native {
-		utils.Run("removing the native part", cachedProjCtx, false, "%s", core.RemoveCmd()+" native")
+		utils.Run("removing the native part", cachedProjCtx, false, "%s native", core.RemoveCmd())
 	}
 
 	// moving it
-	utils.Run("moving the project", ctx.WithExecDir("."), false, core.MoveCmd()+" %s %s", path.Join(utils.GetCacheDir(), projectNameKebab), projectNameKebab)
+	projectDestination := core.IfThenElse(destination == "", projectNameKebab, destination)
+	// utils.Run("moving the project", ctx.WithExecDir("."), false, core.MoveCmd()+" %s %s", path.Join(utils.GetCacheDir(), projectNameKebab), projectDestination)
+	utils.Run("moving the project", ctx.WithExecDir("."), false, "rsync -a --remove-source-files %s/ %s/", path.Join(utils.GetCacheDir(), projectNameKebab), projectDestination)
 
-	// tweaking the config
-	configFilePath := path.Join(projectNameKebab, ".aldev.yaml")
-	if !noAPI {
-		core.ReplaceInFile(configFilePath, map[string]string{"#IFAPI ": ""})
-	}
-	if !noWeb {
-		core.ReplaceInFile(configFilePath, map[string]string{"#IFWEB ": ""})
-	}
-	if native {
-		core.ReplaceInFile(configFilePath, map[string]string{"#IFNATIVE ": ""})
-	}
+	// // tweaking the config
+	// if !noAPI {
+	// 	core.ReplaceInFile(configFilePath, map[string]string{"#IFAPI ": ""})
+	// }
+	// if !noWeb {
+	// 	core.ReplaceInFile(configFilePath, map[string]string{"#IFWEB ": ""})
+	// }
+	// if native {
+	// 	core.ReplaceInFile(configFilePath, map[string]string{"#IFNATIVE ": ""})
+	// }
 
-	// simple reading of the config - for real config loading, use utils.ReadConfig
-	conf := core.ReadFileFromYAML(configFilePath, &utils.AldevConfig{}, true)
+	// // simple reading of the config - for real config loading, use utils.ReadConfig
+	// conf := core.ReadFileFromYAML(configFilePath, &utils.AldevConfig{}, true)
 
-	// customising each app part of the project
-	if native {
-		bootstrapNativeApp(ctx.WithExecDir(projectNameKebab), conf)
-	}
+	// // customising each app part of the project
+	// if native {
+	// 	bootstrapNativeApp(ctx.WithExecDir(projectNameKebab), conf)
+	// }
 
 	// we're done
 	utils.Info("Done initialising an aldev project in %s", time.Since(start))

@@ -9,9 +9,4 @@ import "sync"
 type AldevTask func(ctx CancelableContext)
 
 func goRoutine(wg *sync.WaitGroup, task AldevTask, ctx CancelableContext) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		task(ctx)
-	}()
 }
