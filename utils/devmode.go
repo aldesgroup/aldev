@@ -28,6 +28,10 @@ func IsDevLibrary() bool {
 	return !onlyAPI && Config().Lib != nil && Config().Lib.SrcDir != ""
 }
 
+func IsDevGoSrc() bool {
+	return IsDevAPI() || IsDevLibrary()
+}
+
 func IsDevNative() bool {
 	return !onlyAPI && Config().Native != nil && Config().Native.SrcDir != ""
 }

@@ -7,28 +7,27 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
-
-	core "github.com/aldesgroup/corego"
 )
 
-func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsString string, params ...any) {
+func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsString string, params ...any) bool {
 	// splitting the command elements as expected by the os/exec package
 	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
 
 	// running the command
-	runCmd(whyRunThis, ctx, logStart, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...))
+	return runCmd(whyRunThis, ctx, logStart, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...))
 }
 
-func QuickRun(whyRunThis string, commandAsString string, params ...any) {
+func QuickRun(whyRunThis string, commandAsString string, params ...any) bool {
 	if verbose {
-		Run(whyRunThis, NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout), verbose, commandAsString, params...)
-	} else {
-		Run(whyRunThis, NewBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
+		return Run(whyRunThis, NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout), verbose, commandAsString, params...)
 	}
+
+	return Run(whyRunThis, NewBaseContext().WithStdErrWriter(io.Discard), false, commandAsString, params...)
 }
 
 func RunAndGet(whyRunThis string, execDir string, logStart bool, commandAsString string, params ...any) []byte {
@@ -42,7 +41,7 @@ func RunAndGet(whyRunThis string, execDir string, logStart bool, commandAsString
 	return buffer.Bytes()
 }
 
-func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exec.Cmd) {
+func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exec.Cmd) bool {
 	// making sure we have a non-nil context here
 	ctx := ctxArg
 	if ctx == nil {
@@ -90,18 +89,22 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 		if logStart && ok && exitErr.ExitCode() == -1 {
 			Info("Command canceled due to context cancellation")
 		} else {
+			errMsg := fmt.Sprintf("Command [%s%s] failed: %v", fromDirString, cmd.String(), errRun.Error())
 			// let's re-run to have more info, if not printed on stderr at first
 			if ctx.isReRun() {
-				Error("Command [%s] failed: %v", cmd.String(), errRun.Error())
+				Error("%s", errMsg)
 				Run("Re-running the command to get the error logs",
 					NewBaseContext().WithStdErrWriter(os.Stderr).WithExecDir(ctx.getExecDir()), true, "%s", cmd.String())
 			} else {
 				if !ctx.isAllowingFailure() {
-					// ctx.getErrLogFn()("Command [%s] failed: %v", cmd.String(), errRun.Error())
-					core.PanicMsg("Command [%s] failed: %v", cmd.String(), errRun.Error())
+					panic(errMsg)
+				} else {
+					slog.Error(errMsg)
 				}
 			}
 		}
+
+		return false
 	}
 
 	// bit of logging, only in verbose mode
@@ -112,4 +115,7 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 			StepWithPreamble(whyRunThis, "--- [SH.RUN]> Done%s: '%s' in %s", fromDirString, cmd.String(), time.Since(start))
 		}
 	}
+
+	// it went fine
+	return true
 }

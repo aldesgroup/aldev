@@ -50,11 +50,12 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	cmd.ReadCommonArgsAndConfig()
 
-	// the context to build Go sources
-	completeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
+	// the contexts to build & codegen Go sources
+	buildingCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir()).WithAllowFailure(true)
+	codegenCtx := utils.InitAldevContext(100, nil).WithAllowFailure(true)
 
 	// making sure we're applying what's decided in the go.mod file
-	utils.Run("Making sure we're using the right set of dependencies", completeCtx, false, "go mod tidy")
+	must(utils.Run("Making sure we're using the right set of dependencies", buildingCtx, false, "go mod tidy"))
 
 	// control
 	if utils.GetBinDir() == "" {
@@ -80,7 +81,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// compilation n°1 - this is needed to have the run command up-to-date
-	utils.Run("Only compiling & formatting the code", completeCtx, false, "%s", mainCompileCmd)
+	must(utils.Run("Only compiling & formatting the code", buildingCtx, false, "%s", mainCompileCmd))
 
 	if compilationOnly {
 		return
@@ -92,41 +93,41 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// generation step n°1
-	utils.QuickRun("Generating stuff: DB list, BOclasses, BO registry...", "%s", mainRunCmd+" -codegen 1"+regenArg)
+	must(utils.Run("Generating stuff: DB list, BOclasses, BO registry...", codegenCtx, false, "%s", mainRunCmd+" -codegen 1"+regenArg))
 
 	// compilation n°2
 	if codeHasChanged() {
-		utils.Run("Does it still compile after codegen step 1?", completeCtx, false, "%s", mainCompileCmd)
+		must(utils.Run("Does it still compile after codegen step 1?", buildingCtx, false, "%s", mainCompileCmd))
 	}
 
 	// generation step n°2
-	utils.QuickRun("Generating stuff: BO specs...", "%s", mainRunCmd+" -codegen 2"+regenArg)
+	must(utils.Run("Generating stuff: BO specs...", codegenCtx, false, "%s", mainRunCmd+" -codegen 2"+regenArg))
 
 	// compilation n°3
 	if codeHasChanged() {
-		utils.Run("Does it still compile after codegen step 2?", completeCtx, false, "%s", mainCompileCmd)
+		must(utils.Run("Does it still compile after codegen step 2?", buildingCtx, false, "%s", mainCompileCmd))
 	}
 
 	// generation step n°3
-	utils.QuickRun("Generating stuff: BO vmaps, BO web models, etc...", "%s", mainRunCmd+" -codegen 3"+regenArg)
+	must(utils.Run("Generating stuff: BO vmaps, BO web models, etc...", codegenCtx, false, "%s", mainRunCmd+" -codegen 3"+regenArg))
 
 	// compilation n°4
 	if codeHasChanged() {
-		utils.Run("Does it still compile after codegen step 3?", completeCtx, false, "%s", mainCompileCmd)
+		must(utils.Run("Does it still compile after codegen step 3?", buildingCtx, false, "%s", mainCompileCmd))
 	}
 
 	// formatting
-	utils.QuickRun("Formatting the code", "gofumpt -w %s %s", path.Join(utils.GetGoSrcDir(), "_include"), path.Join(utils.GetGoSrcDir(), "main"))
+	must(utils.Run("Formatting the code", codegenCtx, false, "gofumpt -w %s %s", path.Join(utils.GetGoSrcDir(), "_include"), path.Join(utils.GetGoSrcDir(), "main")))
 
 	// migrating the DBs if needed
 	if !utils.IsDevLibrary() {
-		utils.QuickRun("DB automigration", "%s", mainRunCmd+" -migrate")
+		must(utils.Run("DB automigration", codegenCtx, false, "%s", mainRunCmd+" -migrate"))
 	}
 
 	// under Windows, the executable for codegen and API serving is not the same - we need to build the executable for the containers
 	if core.IsWindows() && !noContainer && codeHasChanged() {
 		secondaryCompileCmd := fmt.Sprintf("go build -o %s/%s ./main", utils.GetBinDir(), binName)
-		utils.Run("Compiling for containerization (Linux)", completeCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd)
+		must(utils.Run("Compiling for containerization (Linux)", buildingCtx.WithEnvVars("GOOS=linux"), false, "%s", secondaryCompileCmd))
 	}
 
 	// bit of logging
@@ -141,4 +142,10 @@ const dirtyFILENAME = "dirty"
 
 func codeHasChanged() bool {
 	return string(core.ReadFile(path.Join(utils.GetGoSrcDir(), utils.GetBinDir(), dirtyFILENAME), false)) == "true"
+}
+
+func must(result bool) {
+	if !result {
+		panic("Issue with code compilation or generation!")
+	}
 }

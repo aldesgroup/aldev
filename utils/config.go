@@ -54,6 +54,7 @@ type AldevConfig struct {
 		DataDir        string      // where to find bootstraping data to run the app
 		BinDir         string      // the directory where to find the API's compiled binary, as seen from the API source folder (srcdir)
 		WatchAlso      []string    // the additional folders / files to watch when rebuilding the code
+		LocalInstances int         // the number of instances to deploy when running the API locally
 		resolvedBinDir string      // the bin directory as seen from the project's root
 	}
 	// APIOnly bool      // if true, then no web app is handled
@@ -176,6 +177,11 @@ func ReadConfig(cfgFileName string) {
 			Desc:  "the languages that should be available in the web app",
 			Value: config.Languages,
 		})
+	}
+
+	// Setting some default values
+	if config.API != nil && config.API.LocalInstances <= 0 {
+		config.API.LocalInstances = 3
 	}
 
 	// Dealing with the computed names

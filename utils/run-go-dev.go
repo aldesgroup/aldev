@@ -152,8 +152,10 @@ func devDown() {
 }
 
 func ensureLocalEnvReady() {
-	localEnvCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
-	if !Run("Checking the 'shared-net' network existence", localEnvCtx, false, "%s", "podman network exists shared-net") {
-		Run("Creating the 'shared-net' network", localEnvCtx, false, "%s", "podman network create shared-net")
+	if IsDevAPI() {
+		localEnvCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
+		if !Run("Checking the 'shared-net' network existence", localEnvCtx, false, "%s", "podman network exists shared-net") {
+			Run("Creating the 'shared-net' network", localEnvCtx, false, "%s", "podman network create shared-net")
+		}
 	}
 }

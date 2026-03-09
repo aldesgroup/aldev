@@ -204,7 +204,7 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	// 	// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
 
 	// Generating config files for deploying the app locally, CI / CD, etc.
-	if !disableConfgen {
+	if utils.IsDevAPI() && !disableConfgen {
 		utils.GenerateDeployFiles(ctx)
 	}
 
@@ -220,8 +220,9 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 		// nothing for now, but there will be something FOR SURE
 	}
 
-	if utils.IsDevAPI() {
-		// TODO podman config
-		utils.RunAPI(ctx)
+	if utils.IsDevGoSrc() {
+
+		// Running the Go API in 'dev server' mode
+		utils.RunGoSrcDev(ctx)
 	}
 }

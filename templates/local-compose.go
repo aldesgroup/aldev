@@ -19,6 +19,10 @@ const LocalCOMPOSE = `services:
     # Executes the binary. Running it directly (not via a shell script) helps with signal handling (SIGTERM)
     command: ./bin/{{.AppNameKebab}}-api -config src/{{.API.Config}}
 
+    # This allows several services to talk to each other locally
+    networks:
+      - shared-net
+
   # Defines the Load Balancer
   {{.AppNameShort}}_lb:
     # Nginx micro-image maintained by the Fedora/Red Hat community on Quay
@@ -35,4 +39,12 @@ const LocalCOMPOSE = `services:
 
     depends_on:
       # Ensures the 'go_api' containers are created before Nginx starts looking for them
-      - {{.AppNameShort}}_api`
+      - {{.AppNameShort}}_api
+
+    networks:
+      # The load balancer should be on this network to
+      - shared-net
+
+networks:
+  shared-net:
+    external: true`
