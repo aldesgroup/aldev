@@ -4,6 +4,7 @@
 package utils
 
 import (
+	"os"
 	"path"
 	"time"
 
@@ -19,13 +20,19 @@ const exclusionTypeEXCLUDExALL = 2
 
 var excludedPaths map[string]exclusionType
 
-func RunAPI(ctx CancelableContext) {
+// this function allows to us to continuously develop our Go source, weither it's for an API, or a library
+// this means : rebuilding it every time it's changed, and also running the needed codegen
+func RunGoSrcDev(ctx CancelableContext) {
+	// making sure the local env is ready for running the Go app
+	ensureLocalEnvReady()
+
 	// the paths we don't want to we watched
 	excludedPaths = map[string]exclusionType{
 		GetGoSrcDir(): exclusionTypeEXCLUDExONE, // not including the API folder itself, because of the conf file and go.sum
 		"_include":    exclusionTypeEXCLUDExALL, // obviously not trigering codegen / rebuild on codegen'd files, otherwise: infinite loop
 		"class":       exclusionTypeEXCLUDExALL, // obviously not trigering codegen / rebuild on other codegen'd files, otherwise: infinite loop
 		".git":        exclusionTypeEXCLUDExALL, // not looking into a .git folder
+		"bin":         exclusionTypeEXCLUDExALL, // also obviously not trigering on the binaries
 	}
 
 	// the root paths to watch for changes
@@ -35,7 +42,7 @@ func RunAPI(ctx CancelableContext) {
 	watchedFolders := getWatchedFolders(rootPaths...)
 
 	// performing the initial build & run
-	go apiUp()
+	go devUp()
 
 	// adding a watcher to detect some file changes, for additional needed swaps
 	watcher := WatcherFor(watchedFolders...)
@@ -49,7 +56,7 @@ func RunAPI(ctx CancelableContext) {
 		time.Sleep(10 * time.Millisecond)
 
 		// removing the currently running stuff
-		apiDown()
+		devDown()
 	}()
 
 	// watching all the files here and rebooting the watching if something is changed
@@ -83,8 +90,8 @@ func RunAPI(ctx CancelableContext) {
 						time.Sleep(200 * time.Millisecond)
 
 						// restarting the API
-						apiDown()
-						go apiUp()
+						devDown()
+						go devUp()
 					}
 				}
 
@@ -122,20 +129,31 @@ func getWatchedFolders(givenPaths ...string) (watchedFolders []string) {
 	return
 }
 
-func apiUp() {
+func devUp() {
 	// building the API and code-generating the missing stuff
-	QuickRun("Starting the API (1/2)", "aldev codegen %s", core.IfThenElse(verbose, "-v", ""))
+	codeGenCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
+	if Run("Building & code-generating", codeGenCtx, false, "aldev codegen %s", core.IfThenElse(verbose, "-v", "")) && IsDevAPI() {
 
-	// locally deploying the API with 3 instances
-	QuickRun("Starting the API (2/2)", "podman-compose -f %s/local/compose.yaml up --scale %s_api=3",
-		Config().Deploying.Dir, Config().AppNameShort)
+		// locally deploying the API with 3 instances
+		QuickRun("Starting the API", "podman-compose -f %s/local/compose.yaml up --scale %s_api=%d",
+			Config().Deploying.Dir, Config().AppNameShort, Config().API.LocalInstances)
+	}
 }
 
-func apiDown() {
+func devDown() {
 	// // Nuking everything launched with Podman... That may be a little bit too much
 	// // We'll prolly have to smooth that out sometimes later
-	QuickRun("Stopping the API (1/2)", "podman rm --force --filter name=local_%s_", Config().AppNameShort)
+	if IsDevAPI() {
+		QuickRun("Stopping the API", "podman rm --force --filter name=local_%s_", Config().AppNameShort)
+	}
 
 	// // Also, making sure Podman's internal network is removed to be able to start from fresh later on
 	// QuickRun("Stopping the API (2/2)", "%s", "podman network rm local_default")
+}
+
+func ensureLocalEnvReady() {
+	localEnvCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
+	if !Run("Checking the 'shared-net' network existence", localEnvCtx, false, "%s", "podman network exists shared-net") {
+		Run("Creating the 'shared-net' network", localEnvCtx, false, "%s", "podman network create shared-net")
+	}
 }
