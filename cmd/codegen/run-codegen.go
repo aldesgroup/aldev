@@ -26,7 +26,6 @@ var aldevCodegenCmd = &cobra.Command{
 
 var (
 	compilationOnly bool
-	regen           bool
 	noContainer     bool
 )
 
@@ -35,7 +34,6 @@ func init() {
 	cmd.GetAldevCmd().AddCommand(aldevCodegenCmd)
 
 	aldevCodegenCmd.Flags().BoolVarP(&compilationOnly, "compilation-only", "c", false, "does only the compilation of the code, no generation step")
-	aldevCodegenCmd.Flags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration")
 	aldevCodegenCmd.Flags().BoolVarP(&noContainer, "no-container", "n", false, "if true, then does not build the binary for containerisation")
 }
 
@@ -88,7 +86,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	regenArg := ""
-	if regen {
+	if utils.IsRegen() {
 		regenArg = " -regen"
 	}
 

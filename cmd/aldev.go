@@ -51,6 +51,7 @@ var (
 	swapCode       bool
 	disableConfgen bool
 	disableI18nDL  bool
+	regen          bool
 )
 
 func init() {
@@ -59,6 +60,7 @@ func init() {
 	aldevCmd.PersistentFlags().StringVarP(&cacheDir, "cache", "k", "../tmp", "aldev cache folder")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
 	aldevCmd.PersistentFlags().BoolVarP(&onlyAPI, "api-only", "a", false, "builds & runs only the API part, if present")
+	aldevCmd.PersistentFlags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration of code and config files")
 
 	// arguments for the "aldev" command only
 	aldevCmd.Flags().BoolVarP(&swapCode, "swap", "s", false,
@@ -80,6 +82,7 @@ func GetAldevCmd() *cobra.Command {
 // and reads the content of the YAML aldev config file into a variable
 func ReadCommonArgsAndConfig() {
 	utils.SetVerbose(verbose)
+	utils.SetRegen(regen)
 	utils.SetCacheDir(cacheDir)
 	utils.SetOnlyAPI(onlyAPI)
 	utils.ReadConfig(cfgFileName)

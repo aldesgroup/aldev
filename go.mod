@@ -1,6 +1,6 @@
 module github.com/aldesgroup/aldev
 
-go 1.25.7
+go 1.26.1
 
 require (
 	github.com/aldesgroup/corego v0.0.0-20260209142835-f55d4e6097c8

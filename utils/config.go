@@ -75,7 +75,10 @@ type AldevConfig struct {
 	}
 	Vendors   []*VendorConfig // external projects to vendor into our project
 	Deploying *struct {       // Section for the local deployment of the app
-		Dir string // where all the deploying config should be
+		Dir            string             // where all the deploying config should be
+		RemotePlatform string             // must have one of these values: azure (that's it for now)
+		Global         *DeployEnvConfig   // configuration for the global deployment needs
+		Environments   []*DeployEnvConfig // customising the deployment config files for each remote environment
 	}
 	CodeSwaps []*CodeSwapsConfig // Automatically, temporarily swapping bits of code
 	Jobs      []*JobConfig       // Jobs to run
@@ -83,6 +86,7 @@ type AldevConfig struct {
 	// Computed fields
 	AppNameShort string
 	AppNameKebab string
+	AppNameLower string
 }
 
 type I18nConfig struct {
@@ -118,6 +122,11 @@ type CmdConfig struct {
 	Exec   string // the command to run
 	From   string // the path from which to run the command
 	FailOK bool   // if true, then the command is allowed to fail
+}
+
+type DeployEnvConfig struct {
+	Name   string            // name for the environment, e.g. "dev", "qua", "prd"
+	Params map[string]string // deployment parameters for this environment
 }
 
 // returns the name of the folder where to find the Go source code
@@ -190,6 +199,7 @@ func ReadConfig(cfgFileName string) {
 		config.AppNameShort = strings.ToLower(config.AppName[0:4])
 	}
 	config.AppNameKebab = core.PascalToKebab(config.AppName)
+	config.AppNameLower = strings.ToLower(config.AppName)
 }
 
 // computed property on an Aldev config object
