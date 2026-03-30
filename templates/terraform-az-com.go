@@ -248,9 +248,8 @@ resource "azurerm_container_app" "aca" {
 
   template {
     container {
-      # image  = "${data.azurerm_container_registry.acr.login_server}/{{.AppNameKebab}}-api:latest"
       name   = "{{.AppNameKebab}}-api"
-      image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+      image  = "${var.config.acr_name}.azurecr.io/{{.AppNameKebab}}-api:latest"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -271,15 +270,20 @@ resource "azurerm_container_app" "aca" {
 
   ingress {
     external_enabled = true
-    # target_port      = 8080
-    target_port = 80 // placeholder image
+    target_port      = 55555 // because the API listens on this port
 
     traffic_weight {
       label           = "stable"
       percentage      = 100
       latest_revision = true
     }
+  }
 
+  lifecycle {
+    # CI/CD updates the running image; Terraform should not revert it on next apply.
+    ignore_changes = [
+      template[0].container[0].image
+    ]
   }
 
   tags = { environment = var.config.env, application = "{{.AppName}}" }
