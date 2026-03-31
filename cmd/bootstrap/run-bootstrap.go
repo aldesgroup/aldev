@@ -65,7 +65,7 @@ func init() {
 // ----------------------------------------------------------------------------
 
 func aldevBootstrapRun(command *cobra.Command, args []string) {
-	// handling the base execution parameter
+	// handling the base execution parameters
 	utils.SetVerbose(verbose)
 	utils.SetCacheDir(core.IfThenElse(utils.GetCacheDir() != "", utils.GetCacheDir(), "../tmp"))
 
