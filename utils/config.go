@@ -48,16 +48,18 @@ type AldevConfig struct {
 	}
 	API *struct { // must be filled if there's an API
 		SrcDir         string      // where the API's Goald-based code should be found
-		Config         string      // the path to the config file for the API, from the API's folder
-		Port           int         // the port used to expose the whole load-balanced API service
 		I18n           *I18nConfig // how to translate the API's outputs
 		DataDir        string      // where to find bootstraping data to run the app
 		BinDir         string      // the directory where to find the API's compiled binary, as seen from the API source folder (srcdir)
 		WatchAlso      []string    // the additional folders / files to watch when rebuilding the code
 		LocalInstances int         // the number of instances to deploy when running the API locally
 		resolvedBinDir string      // the bin directory as seen from the project's root
+		Runtimes       *struct {
+			Common *APIRuntimeConfig            // the common API runtime config for all the environments, local + remote ones
+			Local  *APIRuntimeConfig            // local env config, which may override the common config
+			Remote map[string]*APIRuntimeConfig // configs for remote environments, which should override the common config
+		} // the path to the config file for the API, from the API's folder
 	}
-	// APIOnly bool      // if true, then no web app is handled
 	Web *struct { // must be filled if there's a web app
 		SrcDir  string      // where the Web app's GoaldR-based code should be found
 		Port    int         // the port used to expose the app's frontend
@@ -75,10 +77,18 @@ type AldevConfig struct {
 	}
 	Vendors   []*VendorConfig // external projects to vendor into our project
 	Deploying *struct {       // Section for the local deployment of the app
-		Dir            string             // where all the deploying config should be
-		RemotePlatform string             // must have one of these values: azure (that's it for now)
-		Global         *DeployEnvConfig   // configuration for the global deployment needs
-		Environments   []*DeployEnvConfig // customising the deployment config files for each remote environment
+		Dir  string // where all the deploying config should be
+		CICD *struct {
+			Type   string            // must have one of these values: gitlab (that's it for now)
+			Config map[string]string // specific config parameters for the given CI/CD workflow type
+		}
+		Platform *struct {
+			Type   string // must have one of these values: azure (that's it for now)
+			Config *struct {
+				Global       DeployEnvConfig            // configuration for the global deployment needs
+				Environments map[string]DeployEnvConfig // customising the deployment config files for each remote environment
+			}
+		}
 	}
 	CodeSwaps []*CodeSwapsConfig // Automatically, temporarily swapping bits of code
 	Jobs      []*JobConfig       // Jobs to run
@@ -124,9 +134,12 @@ type CmdConfig struct {
 	FailOK bool   // if true, then the command is allowed to fail
 }
 
-type DeployEnvConfig struct {
-	Name   string            // name for the environment, e.g. "dev", "qua", "prd"
-	Params map[string]string // deployment parameters for this environment
+type DeployEnvConfig map[string]string // deployment parameters for this environment
+
+type APIRuntimeConfig struct {
+	Port   int       // on which port the API should be listening
+	Base   yaml.Node // the base configuration for all the Goald API servers
+	Custom yaml.Node // the more applicative part of the config
 }
 
 // returns the name of the folder where to find the Go source code
@@ -153,14 +166,6 @@ func GetBinDir() string {
 	}
 
 	return Config().API.BinDir
-}
-
-func GetConfigPath() string {
-	if IsDevLibrary() {
-		return Config().Lib.Config
-	}
-
-	return Config().API.Config
 }
 
 func ReadConfig(cfgFileName string) {
@@ -217,4 +222,18 @@ func (cfg *AldevConfig) ResolvedBinDir() string {
 	}
 
 	return cfg.API.resolvedBinDir
+}
+
+// computed property on an Aldev config object
+func (cfg *AldevConfig) LocalPort() int {
+	if cfg.API.Runtimes != nil {
+		if cfg.API.Runtimes.Local != nil && cfg.API.Runtimes.Local.Port > 0 {
+			return cfg.API.Runtimes.Local.Port
+		}
+		if cfg.API.Runtimes.Common != nil {
+			return cfg.API.Runtimes.Common.Port
+		}
+	}
+
+	return 0
 }

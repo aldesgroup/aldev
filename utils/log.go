@@ -30,7 +30,7 @@ func Info(str string, params ...any) {
 
 type logFn func(string, ...any)
 
-type errLogFn func(string, ...any)
+// type errLogFn func(string, ...any)
 
 func log(preambleMsg string, fn logFn, separator, str string, params ...any) {
 	println("")

@@ -1,4 +1,4 @@
-package templates
+package azure
 
 const TerraformAzureBACKEND = `# --------------------------------------------------------------------------- #
 # -- Terraform state storage fdor the resources described in this folder
@@ -35,6 +35,8 @@ locals {
     acr_rg = "{acr_rg}"
     # The domain name, something like: companyname.com
     domain_name = "{domain_name}"
+    # The port the API will listen to
+    port = "{port}"
   }
 }
 
@@ -85,5 +87,33 @@ resource "azuread_application" "app_{resource_ns}_{{.AppNameLower}}" {
 
 resource "azuread_service_principal" "sp_{resource_ns}_{{.AppNameLower}}" {
   client_id = azuread_application.app_{resource_ns}_{{.AppNameLower}}.client_id
+}
+`
+
+const TerraformAzureGLOBALxMAINnGITLAB = TerraformAzureGLOBALxMAIN + `
+# --------------------------------------------------------------------------- #
+# --- Allowing Gitlab to deploy stuff on Azure for this app
+# --------------------------------------------------------------------------- #
+
+data "azuread_application" "app_gitlab_oidc" {
+  display_name = "{gitlab_cid}"
+}
+
+resource "azuread_application_federated_identity_credential" "gitlab_main" {
+  application_id = data.azuread_application.app_gitlab_oidc.id
+  display_name   = "gitlab-for-{{.AppNameLower}}-main-commits"
+
+  issuer    = "{gitlab_url}"
+  subject   = "project_path:{git_repo}:ref_type:branch:ref:main"
+  audiences = ["api://AzureADTokenExchange"]
+}
+
+resource "azuread_application_federated_identity_credential" "gitlab_tagged" {
+  application_id = data.azuread_application.app_gitlab_oidc.id
+  display_name   = "gitlab-for-{{.AppNameLower}}-tagged-commits"
+
+  issuer    = "{gitlab_url}"
+  subject   = "project_path:{git_repo}:ref_type:tag:ref:*"
+  audiences = ["api://AzureADTokenExchange"]
 }
 `

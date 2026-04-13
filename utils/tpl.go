@@ -11,7 +11,7 @@ import (
 	core "github.com/aldesgroup/corego"
 )
 
-func EnsureFileFromTemplate(filepath, tpl string, params ...any) {
+func EnsureFileFromTemplateAndContext(context any, filepath, tpl string, params ...any) {
 	Debug("Making sure this file exists: %s", filepath)
 
 	content := tpl
@@ -29,5 +29,9 @@ func EnsureFileFromTemplate(filepath, tpl string, params ...any) {
 	defer outputFile.Close()
 
 	// Execute the template with the data
-	core.PanicIfErr(tmpl.Execute(outputFile, Config()))
+	core.PanicIfErr(tmpl.Execute(outputFile, context))
+}
+
+func EnsureFileFromTemplate(filepath, tpl string, params ...any) {
+	EnsureFileFromTemplateAndContext(Config(), filepath, tpl, params...)
 }

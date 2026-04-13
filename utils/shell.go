@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -99,7 +98,7 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 				if !ctx.isAllowingFailure() {
 					panic(errMsg)
 				} else {
-					slog.Error(errMsg)
+					Error("%s", errMsg)
 				}
 			}
 		}

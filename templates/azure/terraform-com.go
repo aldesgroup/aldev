@@ -1,4 +1,4 @@
-package templates
+package azure
 
 const TerraformAzureCOMMONxMAIN = `# --------------------------------------------------------------------------- #
 # --- Input variables
@@ -14,6 +14,7 @@ variable "config" {
     acr_name             = string # The name of the container registry we use
     acr_rg               = string # The resource group the container registry belongs to
     domain_name          = string # The full domain name, something like: companyname.com
+    port                 = number # The port the API will listen to
   })
 }
 
@@ -270,7 +271,7 @@ resource "azurerm_container_app" "aca" {
 
   ingress {
     external_enabled = true
-    target_port      = 55555 // because the API listens on this port
+    target_port      = var.config.port
 
     traffic_weight {
       label           = "stable"
@@ -318,9 +319,9 @@ resource "azurerm_container_app" "aca" {
 
 # ----------------------- Outputs utiles -----------------------
 
-output "aca_default_fqdn" {
-  description = "ACA's default FQDN (to use as the CNAME's target)"
-  value       = azurerm_container_app.aca.ingress[0].fqdn
+output "aca_api_base_url" {
+  description = "Base HTTPS URL of the ACA API"
+  value       = "https://${azurerm_container_app.aca.ingress[0].fqdn}"
 }
 
 # output "custom_domain" {

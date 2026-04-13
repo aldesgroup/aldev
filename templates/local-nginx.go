@@ -17,8 +17,8 @@ http {
     upstream {{.AppNameShort}}_servers {
         # '{{.AppNameShort}}_api' is the service name defined in the compose.yaml.
         # Podman-compose creates a private network where '{{.AppNameShort}}_api' resolves to the internal IPs
-        # of your Go containers on port 55555.
-        server {{.AppNameShort}}_api:55555;
+        # of your Go containers on port {{.LocalPort}}.
+        server {{.AppNameShort}}_api:{{.LocalPort}};
     }
 
     server {

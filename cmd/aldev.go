@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"os"
-	"path"
 	"time"
 
 	"github.com/aldesgroup/aldev/utils"
@@ -47,7 +46,6 @@ var (
 	cfgFileName    string
 	cacheDir       string
 	verbose        bool
-	onlyAPI        bool
 	swapCode       bool
 	disableConfgen bool
 	disableI18nDL  bool
@@ -59,7 +57,7 @@ func init() {
 	aldevCmd.PersistentFlags().StringVarP(&cfgFileName, "file", "f", ".aldev.yaml", "aldev config file")
 	aldevCmd.PersistentFlags().StringVarP(&cacheDir, "cache", "k", "../tmp", "aldev cache folder")
 	aldevCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "activates debug logging")
-	aldevCmd.PersistentFlags().BoolVarP(&onlyAPI, "api-only", "a", false, "builds & runs only the API part, if present")
+	// aldevCmd.PersistentFlags().BoolVarP(&onlyAPI, "api-only", "a", false, "builds & runs only the API part, if present")
 	aldevCmd.PersistentFlags().BoolVarP(&regen, "regen", "r", false, "forces the regeneration of code and config files")
 
 	// arguments for the "aldev" command only
@@ -84,7 +82,6 @@ func ReadCommonArgsAndConfig() {
 	utils.SetVerbose(verbose)
 	utils.SetRegen(regen)
 	utils.SetCacheDir(cacheDir)
-	utils.SetOnlyAPI(onlyAPI)
 	utils.ReadConfig(cfgFileName)
 }
 
@@ -96,11 +93,6 @@ func ReadCommonArgsAndConfig() {
 func aldevRun(command *cobra.Command, args []string) {
 	// Reading this command's arguments, and reading the aldev YAML config file
 	ReadCommonArgsAndConfig()
-
-	// // also valueing here, since the source of truth must lie in the utils package
-	// if swapCode {
-	// 	utils.UseCodeSwaps()
-	// }
 
 	// the main cancelable context, that should stop everything
 	aldevCtx := utils.InitAldevContext(2000, nil)
@@ -116,15 +108,18 @@ func aldevRun(command *cobra.Command, args []string) {
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
 	if swapCode {
 		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap")
+		// slog.Debug("Sleeping")
+		// time.Sleep(100 * time.Millisecond) // allowing the swap to be done before the main loop starts
+		// slog.Debug("Slept")
 	}
 
 	// --- main loop stuff
 
 	// for which file changes are we going to restart the main loop?
 	watched := []string{cfgFileName} // Aldev's config
-	if utils.Config().API != nil {
-		watched = append(watched, path.Join(utils.GetGoSrcDir(), utils.GetConfigPath())) // the API or lib's config
-	}
+	// if utils.Config().API != nil {
+	// 	watched = append(watched, path.Join(utils.GetGoSrcDir()))
+	// }
 
 	// adding a watcher to detect some file changes
 	watcher := utils.WatcherFor(watched...)
@@ -193,31 +188,10 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	// proceed to download the needed external resources
 	utils.DownloadExternalResources(ctx, !disableI18nDL)
 
-	// TODO rework all this - library & API al-development
-
-	// // in library mode, there no need for k8s, deployments, env vars, etc.
-	// if utils.IsDevLibrary() {
-	// 	utils.QuickRun("Installing / refreshing the dev environment", "%s", utils.Config().Lib.Install)
-	// 	utils.Run("Developing the lib", ctx, true, "%s", utils.Config().Lib.Develop)
-
-	// 	// Wait for the context to be canceled or the program to exit
-	// 	<-ctx.Done()
-
-	// } else if utils.IsDevAPI() {
-	// 	// if we develop an API (with or without a web app), then we want to locally deploy it to a K8S cluster
-
 	// Generating config files for deploying the app locally, CI / CD, etc.
 	if utils.IsDevAPI() && !disableConfgen {
 		utils.GenerateDeployFiles(ctx)
 	}
-
-	// 	// Ready for launch
-	// 	if noContainer {
-	// 		utils.DeployWithNoContainer(ctx)
-	// 	} else {
-	// 		utils.DeployToLocalCluster(ctx)
-	// 	}
-	// }
 
 	if utils.IsDevNative() {
 		// nothing for now, but there will be something FOR SURE

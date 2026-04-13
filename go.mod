@@ -3,7 +3,7 @@ module github.com/aldesgroup/aldev
 go 1.26.1
 
 require (
-	github.com/aldesgroup/corego v0.0.0-20260209142835-f55d4e6097c8
+	github.com/aldesgroup/corego v0.0.0-20260410152625-735edfd1ab0e
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spf13/cobra v1.10.2
@@ -13,7 +13,7 @@ require (
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 

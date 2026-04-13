@@ -132,7 +132,9 @@ func getWatchedFolders(givenPaths ...string) (watchedFolders []string) {
 func devUp() {
 	// building the API and code-generating the missing stuff
 	codeGenCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
-	if Run("Building & code-generating", codeGenCtx, false, "aldev codegen %s", core.IfThenElse(verbose, "-v", "")) && IsDevAPI() {
+	options := core.IfThenElse(verbose, "-v", "")
+	options += core.IfThenElse(regen, " -r", "")
+	if Run("Building & code-generating", codeGenCtx, false, "aldev codegen %s", options) && IsDevAPI() {
 
 		// locally deploying the API with 3 instances
 		QuickRun("Starting the API", "podman-compose -f %s/local/compose.yaml up --scale %s_api=%d",

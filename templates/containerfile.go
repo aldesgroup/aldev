@@ -3,7 +3,7 @@ package templates
 const ContainerFILE = `# 2-stages = 900+ mo (golang image + our sources) -> ~145 mo final image
 
 # Stage 1: Build the binary
-FROM quay.io/projectquay/golang:%s AS builder
+FROM quay.io/projectquay/golang:%[1]s AS builder
 
 # Set the context to the folder containing go.mod
 WORKDIR /container-api-src
@@ -31,9 +31,12 @@ WORKDIR /container-api-bin
 # Copy the binary from the builder stage
 COPY --from=builder /bin/{{.AppNameKebab}}-api bin/
 
+# This container file will be the same for all the environments
+ARG ENV
+
 # Copy your necessary config/data from the host
 # Note: These paths are relative to where you run 'podman build'
-COPY {{.API.SrcDir}}/{{.API.Config}} apiconf.yaml
+COPY {{.API.SrcDir}}/conf-${ENV}.yaml conf.yaml
 COPY {{.API.DataDir}}/ ./{{.API.DataDir}}/
 
-ENTRYPOINT ["bin/{{.AppNameKebab}}-api", "-config", "apiconf.yaml"]`
+ENTRYPOINT ["bin/{{.AppNameKebab}}-api", "-config", "conf.yaml"]`

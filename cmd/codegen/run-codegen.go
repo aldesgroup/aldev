@@ -69,7 +69,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	mainCompileCmd := fmt.Sprintf("go build -o %s/%s%s ./main", utils.GetBinDir(), binName, execExt)
 	mainRunCmd := fmt.Sprintf("%s/%s%s -config %s -srcdir %s -bindir %s",
 		utils.Config().ResolvedBinDir(), binName, execExt,
-		path.Join(utils.GetGoSrcDir(), utils.GetConfigPath()),
+		path.Join(utils.GetGoSrcDir(), "conf-local.yaml"),
 		utils.GetGoSrcDir(), path.Join(utils.GetGoSrcDir(), utils.GetBinDir()))
 	if utils.Config().Web != nil {
 		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
@@ -99,7 +99,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// generation step n°2
-	must(utils.Run("Generating stuff: BO specs...", codegenCtx, false, "%s", mainRunCmd+" -codegen 2"+regenArg))
+	must(utils.Run("Generating stuff: BO models...", codegenCtx, false, "%s", mainRunCmd+" -codegen 2"+regenArg))
 
 	// compilation n°3
 	if codeHasChanged() {

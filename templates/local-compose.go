@@ -17,7 +17,7 @@ const LocalCOMPOSE = `services:
       - ../../{{.API.DataDir}}:/api/data:z
 
     # Executes the binary. Running it directly (not via a shell script) helps with signal handling (SIGTERM)
-    command: ./bin/{{.AppNameKebab}}-api -config src/{{.API.Config}}
+    command: ./bin/{{.AppNameKebab}}-api -config src/conf-local.yaml
 
     # This allows several services to talk to each other locally
     networks:
@@ -31,7 +31,7 @@ const LocalCOMPOSE = `services:
 
     ports:
       # Maps your laptop's port 8080 to the Nginx port 8080
-      - "{{.API.Port}}:8080"
+      - "{{.LocalPort}}:8080"
 
     volumes:
       # Mounts your custom load-balancing config as Read-Only (:ro)

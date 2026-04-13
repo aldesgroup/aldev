@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aldesgroup/aldev/cmd"
+	"github.com/aldesgroup/aldev/templates"
 	"github.com/aldesgroup/aldev/utils"
 	core "github.com/aldesgroup/corego"
 	"github.com/spf13/cobra"
@@ -34,6 +35,7 @@ var aldevBootstrapCmd = &cobra.Command{
 var (
 	verbose           bool
 	projectNamePascal string
+	projectNameKebab  string
 	templateLink      string
 	templatePrivate   bool
 	noAPI             bool
@@ -41,6 +43,8 @@ var (
 	native            bool
 	asSubproject      bool
 	destination       string
+	repo              string
+	group             string
 )
 
 func init() {
@@ -58,6 +62,8 @@ func init() {
 	aldevBootstrapCmd.Flags().BoolVarP(&asSubproject, "as-subproject", "j", false, "allow to run `aldev boostrap` inside an existing git project")
 	aldevBootstrapCmd.Flags().StringVarP(&destination, "destination", "d", "", "generate the app into the targeted folder, instead of ./the-project-name "+
 		"(from --name TheProjectName); can be '.' to generate the app in the current folder")
+	aldevBootstrapCmd.Flags().StringVar(&repo, "repo", "", "the URL or the Git repository, e.g. my-site.domain.com")
+	aldevBootstrapCmd.Flags().StringVarP(&group, "group", "g", "", "the group into which to push the project, e.g. group-name[/subgroup]")
 }
 
 // ----------------------------------------------------------------------------
@@ -73,10 +79,10 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	if projectNamePascal == "" || strings.Contains(projectNamePascal, " ") || strings.Contains(projectNamePascal, "_") {
 		core.PanicMsg("Project name ('%s') must not be empty, or contain any space or _ characters", projectNamePascal)
 	}
-	projectNameKebab := core.PascalToKebab(projectNamePascal)
-	if projectNamePascal != core.KebabToPascal(projectNameKebab) {
+	if projectNamePascal != core.ToPascal(projectNamePascal) {
 		core.PanicMsg("Project name ('%s') should be in PascalCase!", projectNamePascal)
 	}
+	projectNameKebab = core.PascalToKebab(projectNamePascal)
 	if core.DirExists(projectNameKebab) {
 		core.PanicMsg("There's already a project '%s' ('%s') here!", projectNamePascal, projectNameKebab)
 	}
@@ -118,7 +124,8 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	// removing obvious stuff, for starters
 	utils.Run("removing the .git folder", cachedProjCtx, false, "%s", core.RemoveCmd()+" .git")
 	utils.Run("removing the deploy folder", cachedProjCtx, false, "%s deploy", core.RemoveCmd())
-	utils.Run("removing the README (for now)", cachedProjCtx, false, "%s README.md", core.RemoveCmd())
+	utils.Run("removing the README file", cachedProjCtx, false, "%s README.md", core.RemoveCmd())
+	utils.Run("removing the .gitignore file", cachedProjCtx, false, "%s .gitignore", core.RemoveCmd())
 
 	// simple reading of the config - for real config loading, use utils.ReadConfig
 	configFilePath := path.Join(cachedProjDir, ".aldev.yaml")
@@ -134,9 +141,6 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 
 	// --- in the API
 	goModuleName := projectNameKebab
-	if !asSubproject {
-		panic("Main-project mode is not handled yet!")
-	}
 	templateModuleContent := core.ReadFile(path.Join(cachedProjDir, conf.API.SrcDir, "go.mod"), true)
 	templateModuleName := core.After(core.Before(string(templateModuleContent), "\n"), "module ")
 	core.ReplaceInFile(path.Join(cachedProjDir, conf.API.SrcDir, "go.mod"), map[string]string{templateModuleName: goModuleName})
@@ -158,7 +162,7 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	// // TODO make it more customizable
 	// newProjCtx := ctx.WithExecDir(projectName)
 	// utils.Run("initializing Git", newProjCtx, false, "git init")
-	// utils.EnsureFileFromTemplate(path.Join(projectName, ".gitignore"), templates.GitIgnore)
+	utils.EnsureFileFromTemplateAndContext(nil, path.Join(cachedProjDir, ".gitignore"), templates.GitIgnore)
 	// utils.Run("adding the files", newProjCtx, false, "git add .")
 	// utils.Run("committing the files", newProjCtx, false, "git commit -m \"dev: new aldev project\"") // TODO this fails for now
 	// utils.Run("pushing the first commit", newProjCtx, false,
@@ -176,9 +180,8 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	}
 
 	// moving it
-	projectDestination := core.IfThenElse(destination == "", projectNameKebab, destination)
-	// utils.Run("moving the project", ctx.WithExecDir("."), false, core.MoveCmd()+" %s %s", path.Join(utils.GetCacheDir(), projectNameKebab), projectDestination)
-	utils.Run("moving the project", ctx.WithExecDir("."), false, "rsync -a --remove-source-files %s/ %s/", path.Join(utils.GetCacheDir(), projectNameKebab), projectDestination)
+	projectDir := core.IfThenElse(destination == "", projectNameKebab, destination)
+	utils.Run("moving the project", ctx.WithExecDir("."), false, "rsync -a --remove-source-files %s/ %s/", path.Join(utils.GetCacheDir(), projectNameKebab), projectDir)
 
 	// // tweaking the config
 	// if !noAPI {
@@ -199,50 +202,69 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	// 	bootstrapNativeApp(ctx.WithExecDir(projectNameKebab), conf)
 	// }
 
+	// adding a README file
+	projectCtx := ctx.WithExecDir(projectDir)
+	createReadme(projectCtx, projectDir)
+
+	// pushing to the git repo, if one has been provided
+	pushToGit(projectCtx)
+
 	// we're done
 	utils.Info("Done initialising an aldev project in %s", time.Since(start))
 }
 
-// bootstraps the native app of the project
-func bootstrapNativeApp(ctx utils.CancelableContext, conf *utils.AldevConfig) {
-	nativeTemplate := conf.Native.SrcDir + "_template"
-	utils.Run("renaming the native folder from the template", ctx, false, core.MoveCmd()+" %s %s", conf.Native.SrcDir, nativeTemplate)
-
-	// utils.Run("removing the old installation if any", ctx, false, "%s", "npm uninstall -g react-native-cli @react-native-community/cli")
-	// utils.Run("init a new React Native project", ctx, false, "npx @react-native-community/cli@latest init %s", projectNamePascal)
-	// - [ ] npm install:
-	//   - npm i @react-navigation/bottom-tabs @react-navigation/native-stack react-native-gesture-handler react-native-screens
-	//   - npm i react-native-orientation-locker
-	//   - npm i jotai form-atoms @react-native-async-storage/async-storage
-	//   - npm i nativewind react-native-reanimated react-native-safe-area-context@5.4.0 tailwindcss-animate lucide-react-native class-variance-authority tailwind-merge clsx
-	//   - npm i i18next react-i18next react-native-localize
-	//   - npm i react-native-fs react-native-html-to-pdf react-native-share
-	//   - npm i react-native-config
-	//   - npm i react-native-ble-manager react-native-permissions => only if using the BLE
-	//   - npm i react-native-svg
-	//   - npm i async-mutex
-	//TODO   - npm i react-native-reanimated-carousel @react-native-community/slider @rn-primitives/slot @rn-primitives/switch
-
-	// - [ ] npm install --save-dev:
-	//   - npm i -D @rnx-kit/metro-resolver-symlinks
-	//   - npm i -D prettier@^3.0 tailwindcss@^3.4.17 prettier-plugin-tailwindcss@^0.5.11
-	//   - npm i -D babel-plugin-module-resolver
-	//   - npm i -D @types/react-native-html-to-pdf => only if printing PDF
-
-	// replace names in:
-	// - package.json
-
-	// addings:
-	// android/app/build.gradle :
-
-	// Make sure a virtual device is ready : Android Studio > three dots menu > Virtual Device Manager > start 1 device (play button)
-	// adb devices should return something
-
-	// Auto-commit after the installation, before the adding of
-
-	// aldev refresh -v
-
-	// TODO : document : how to prepare a release, with build.gradle, a key etc : better to give a link
-
-	// TODO : Android main Manifest stuff : we can copy for now
+func createReadme(ctx utils.CancelableContext, projectDir string) {
+	core.WriteStringToFile(path.Join(projectDir, "README.md"), "# Project: %s", projectNamePascal)
 }
+
+func pushToGit(ctx utils.CancelableContext) {
+	utils.Run("git init (1/5)", ctx, verbose, "git init --initial-branch=main")
+	utils.Run("git init (2/5)", ctx, verbose, "git remote add origin git@%s:%s/%s.git", repo, group, projectNameKebab)
+	utils.Run("git init (3/5)", ctx, verbose, "git add .")
+	utils.Run("git init (4/5)", ctx, verbose, "git commit -m Init")
+	utils.Run("git init (5/5)", ctx, verbose, "git push --set-upstream origin main")
+}
+
+// // bootstraps the native app of the project
+// func bootstrapNativeApp(ctx utils.CancelableContext, conf *utils.AldevConfig) {
+// 	nativeTemplate := conf.Native.SrcDir + "_template"
+// 	utils.Run("renaming the native folder from the template", ctx, false, core.MoveCmd()+" %s %s", conf.Native.SrcDir, nativeTemplate)
+
+// 	// utils.Run("removing the old installation if any", ctx, false, "%s", "npm uninstall -g react-native-cli @react-native-community/cli")
+// 	// utils.Run("init a new React Native project", ctx, false, "npx @react-native-community/cli@latest init %s", projectNamePascal)
+// 	// - [ ] npm install:
+// 	//   - npm i @react-navigation/bottom-tabs @react-navigation/native-stack react-native-gesture-handler react-native-screens
+// 	//   - npm i react-native-orientation-locker
+// 	//   - npm i jotai form-atoms @react-native-async-storage/async-storage
+// 	//   - npm i nativewind react-native-reanimated react-native-safe-area-context@5.4.0 tailwindcss-animate lucide-react-native class-variance-authority tailwind-merge clsx
+// 	//   - npm i i18next react-i18next react-native-localize
+// 	//   - npm i react-native-fs react-native-html-to-pdf react-native-share
+// 	//   - npm i react-native-config
+// 	//   - npm i react-native-ble-manager react-native-permissions => only if using the BLE
+// 	//   - npm i react-native-svg
+// 	//   - npm i async-mutex
+// 	//TODO   - npm i react-native-reanimated-carousel @react-native-community/slider @rn-primitives/slot @rn-primitives/switch
+
+// 	// - [ ] npm install --save-dev:
+// 	//   - npm i -D @rnx-kit/metro-resolver-symlinks
+// 	//   - npm i -D prettier@^3.0 tailwindcss@^3.4.17 prettier-plugin-tailwindcss@^0.5.11
+// 	//   - npm i -D babel-plugin-module-resolver
+// 	//   - npm i -D @types/react-native-html-to-pdf => only if printing PDF
+
+// 	// replace names in:
+// 	// - package.json
+
+// 	// addings:
+// 	// android/app/build.gradle :
+
+// 	// Make sure a virtual device is ready : Android Studio > three dots menu > Virtual Device Manager > start 1 device (play button)
+// 	// adb devices should return something
+
+// 	// Auto-commit after the installation, before the adding of
+
+// 	// aldev refresh -v
+
+// 	// TODO : document : how to prepare a release, with build.gradle, a key etc : better to give a link
+
+// 	// TODO : Android main Manifest stuff : we can copy for now
+// }
