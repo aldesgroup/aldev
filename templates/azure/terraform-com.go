@@ -317,15 +317,7 @@ resource "azurerm_container_app" "aca" {
 #   ]
 # }
 
-# ----------------------- Outputs utiles -----------------------
+# ----------------------- Useful outputs  -----------------------------------
 
-output "aca_api_base_url" {
-  description = "Base HTTPS URL of the ACA API"
-  value       = "https://${azurerm_container_app.aca.ingress[0].fqdn}"
-}
-
-# output "custom_domain" {
-#   description = "ACA's full custom domain name"
-#   value       = local.subdomain_name
-# }
+# We never get outputs because the apply always fails at least once
 `
