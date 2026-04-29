@@ -22,7 +22,7 @@ var excludedPaths map[string]exclusionType
 
 // this function allows to us to continuously develop our Go source, weither it's for an API, or a library
 // this means : rebuilding it every time it's changed, and also running the needed codegen
-func RunGoSrcDev(ctx CancelableContext) {
+func RunGoSrcDev(ctx CancelableContext, noServe bool) {
 	// making sure the local env is ready for running the Go app
 	ensureLocalEnvReady()
 
@@ -42,7 +42,7 @@ func RunGoSrcDev(ctx CancelableContext) {
 	watchedFolders := getWatchedFolders(rootPaths...)
 
 	// performing the initial build & run
-	go devUp()
+	go devUp(noServe)
 
 	// adding a watcher to detect some file changes, for additional needed swaps
 	watcher := WatcherFor(watchedFolders...)
@@ -86,12 +86,12 @@ func RunGoSrcDev(ctx CancelableContext) {
 						core.PanicIfErr(watcher.Close()) // closing the old one
 						watcher = WatcherFor(watchedFolders...)
 
-						// let's wait a bit here than the FS has finished doing it's stuff
+						// let's wait a bit here that the FS has finished doing it's stuff
 						time.Sleep(200 * time.Millisecond)
 
 						// restarting the API
 						devDown()
-						go devUp()
+						go devUp(noServe)
 					}
 				}
 
@@ -129,12 +129,12 @@ func getWatchedFolders(givenPaths ...string) (watchedFolders []string) {
 	return
 }
 
-func devUp() {
+func devUp(noServe bool) {
 	// building the API and code-generating the missing stuff
 	codeGenCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
 	options := core.IfThenElse(verbose, "-v", "")
 	options += core.IfThenElse(regen, " -r", "")
-	if Run("Building & code-generating", codeGenCtx, false, "aldev codegen %s", options) && IsDevAPI() {
+	if Run("Building & code-generating", codeGenCtx, false, "aldev codegen %s", options) && IsDevAPI() && !noServe {
 
 		// locally deploying the API with 3 instances
 		QuickRun("Starting the API", "podman-compose -f %s/local/compose.yaml up --scale %s_api=%d",

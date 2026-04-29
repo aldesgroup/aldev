@@ -139,9 +139,9 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		EnsureFileFromTemplate(containerFilePath, templates.ContainerFILE, moduleGoVersion)
 
 		if verbose {
-			port := getEnvPort(Config().API.Runtimes.Local)
+			port := getEnvPortString(Config().API.Runtimes.Local)
 			Debug("The containerfile used for remote deployment can be used with the following commands (Example): ")
-			Debug("podman build --build-arg ENV=local -f %[1]s -t %[2]s-test-api . && podman run --rm -it -p %[3]d:%[3]d %[2]s-test-api",
+			Debug("podman build --build-arg ENV=local -f %[1]s -t %[2]s-test-api . && podman run --rm -it -p %[3]s:%[3]s %[2]s-test-api",
 				containerFilePath, Config().AppNameShort, port)
 			Debug("Test it with: curl http://localhost:%d/rest/translation/fr\\?Namespace\\=Common", port)
 		}
@@ -179,12 +179,18 @@ func generateAPIConfFile(envName string, envConfig *APIRuntimeConfig, regen bool
 		return
 	}
 
+	// building the base config for the current environment
+	base := mergeYAMLNodes(&Config().API.Runtimes.Common.Base, &envConfig.Base)
+	base = prependValue("port", getEnvPortString(envConfig), base)
+	base = prependValue("appdesc", Config().AppDesc, base)
+	base = prependValue("appname", Config().AppName, base)
+
 	// making a new config by merging the env config on top of the common config
 	newConf := &struct {
 		Base   yaml.Node
 		Custom yaml.Node
 	}{
-		Base:   *withPort(getEnvPort(envConfig), mergeYAMLNodes(&Config().API.Runtimes.Common.Base, &envConfig.Base)),
+		Base:   *base,
 		Custom: *mergeYAMLNodes(&Config().API.Runtimes.Common.Custom, &envConfig.Custom),
 	}
 
@@ -236,25 +242,25 @@ func ensureLocalEnvType() {
 	}
 }
 
-func getEnvPort(envConfig *APIRuntimeConfig) int {
+func getEnvPortString(envConfig *APIRuntimeConfig) string {
 	if envConfig.Port > 0 {
-		return envConfig.Port
+		return strconv.Itoa(envConfig.Port)
 	}
 	if Config().API.Runtimes.Common != nil {
-		return Config().API.Runtimes.Common.Port
+		return strconv.Itoa(Config().API.Runtimes.Common.Port)
 	}
-	return 0
+	return ""
 }
 
-func withPort(port int, baseNode *yaml.Node) *yaml.Node {
-	baseNode.Content = append(
+func prependValue(yamlName, value string, toNode *yaml.Node) *yaml.Node {
+	toNode.Content = append(
 		[]*yaml.Node{
-			{Kind: yaml.ScalarNode, Tag: "!!str", Value: "port"},
-			{Kind: yaml.ScalarNode, Value: strconv.Itoa(port)},
+			{Kind: yaml.ScalarNode, Tag: "!!str", Value: yamlName},
+			{Kind: yaml.ScalarNode, Value: value},
 		},
-		baseNode.Content...)
+		toNode.Content...)
 
-	return baseNode
+	return toNode
 }
 
 // mergeYAMLNodes merges node B on top of node A.

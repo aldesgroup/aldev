@@ -50,6 +50,7 @@ var (
 	disableConfgen bool
 	disableI18nDL  bool
 	regen          bool
+	noServe        bool
 )
 
 func init() {
@@ -66,6 +67,7 @@ func init() {
 	aldevCmd.Flags().BoolVarP(&disableConfgen, "disable-confgen", "c", false, "disable the generation of all the config files")
 	aldevCmd.Flags().BoolVarP(&disableI18nDL, "disable-i18n-dl", "i", false,
 		"if true, then the translations are not refreshed, which they are by default")
+	aldevCmd.Flags().BoolVarP(&noServe, "no-serve", "n", false, "if true, then the server is not started")
 }
 
 // ----------------------------------------------------------------------------
@@ -200,6 +202,6 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	if utils.IsDevGoSrc() {
 
 		// Running the Go API in 'dev server' mode
-		utils.RunGoSrcDev(ctx)
+		utils.RunGoSrcDev(ctx, noServe)
 	}
 }

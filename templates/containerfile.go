@@ -37,6 +37,6 @@ ARG ENV
 # Copy your necessary config/data from the host
 # Note: These paths are relative to where you run 'podman build'
 COPY {{.API.SrcDir}}/conf-${ENV}.yaml conf.yaml
-COPY {{.API.DataDir}}/ ./{{.API.DataDir}}/
+COPY {{.API.DataDir}}/ ./data/
 
 ENTRYPOINT ["bin/{{.AppNameKebab}}-api", "-config", "conf.yaml"]`
