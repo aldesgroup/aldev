@@ -248,6 +248,9 @@ resource "azurerm_container_app" "aca" {
   }
 
   template {
+    min_replicas = 1
+    max_replicas = 3
+
     container {
       name   = "{{.AppNameKebab}}-api"
       image  = "${var.config.acr_name}.azurecr.io/{{.AppNameKebab}}-api:latest"
