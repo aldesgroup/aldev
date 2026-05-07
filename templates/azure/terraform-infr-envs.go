@@ -1,7 +1,7 @@
 package azure
 
 const TerraformAzureBACKEND = `# --------------------------------------------------------------------------- #
-# -- Terraform state storage fdor the resources described in this folder
+# -- Terraform state storage for the resources described in this folder
 # --------------------------------------------------------------------------- #
 
 terraform {
@@ -14,7 +14,7 @@ terraform {
 }
 `
 
-const TerraformAzureENVxMAIN = `# --------------------------------------------------------------------------- #
+const TerraformAzureINFRAxENV = `# --------------------------------------------------------------------------- #
 # --- Main Terraform config to create the whole infra for the {env} environment
 # --------------------------------------------------------------------------- #
 locals {
@@ -46,7 +46,7 @@ module "infra_%[1]s" {
 }
 `
 
-const TerraformAzureGLOBALxMAIN = `# --------------------------------------------------------------------------- #
+const TerraformAzureINFRAxGLOBAL = `# --------------------------------------------------------------------------- #
 # --- Main Terraform config to the global resources, like the app reg
 # --------------------------------------------------------------------------- #
 
@@ -90,7 +90,7 @@ resource "azuread_service_principal" "sp_{resource_ns}_{{.AppNameLower}}" {
 }
 `
 
-const TerraformAzureGLOBALxMAINnGITLAB = TerraformAzureGLOBALxMAIN + `
+const TerraformAzureINFRAxGLOBALnGITLAB = TerraformAzureINFRAxGLOBAL + `
 # --------------------------------------------------------------------------- #
 # --- Allowing Gitlab to deploy stuff on Azure for this app
 # --------------------------------------------------------------------------- #

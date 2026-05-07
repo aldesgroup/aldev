@@ -35,22 +35,29 @@ func IsRegen() bool {
 // Dealing with several types of remote deployments
 // ----------------------------------------------------------------------------
 
-type remoteDeploymentGenerator interface {
+type iRemoteDeploymentGenerator interface {
 	getPlatform() string
 	generateDeployConfig(remoteDir string)
+	GetServers() map[core.EnvType]string
 }
 
 var remoteDeploymentGeneratorRegistry = &struct {
-	generators map[string]remoteDeploymentGenerator // all the business objects! mapped by the name
+	generators map[string]iRemoteDeploymentGenerator // all the business objects! mapped by the name
 	mx         sync.Mutex
 }{
-	generators: map[string]remoteDeploymentGenerator{},
+	generators: map[string]iRemoteDeploymentGenerator{},
 }
 
-func registerRemoteDeploymentGenerator(generator remoteDeploymentGenerator) {
+func registerRemoteDeploymentGenerator(generator iRemoteDeploymentGenerator) {
 	remoteDeploymentGeneratorRegistry.mx.Lock()
 	defer remoteDeploymentGeneratorRegistry.mx.Unlock()
 	remoteDeploymentGeneratorRegistry.generators[generator.getPlatform()] = generator
+}
+
+func GetRemoteDeploymentGenerator() iRemoteDeploymentGenerator {
+	generator := remoteDeploymentGeneratorRegistry.generators[Config().Deploying.Platform.Type]
+	core.PanicMsgIf(generator == nil, "No deploy config generator found for remote platform '%s'", Config().Deploying.Platform.Type)
+	return generator
 }
 
 // ----------------------------------------------------------------------------
@@ -115,11 +122,11 @@ func GenerateDeployFiles(ctx CancelableContext) {
 
 		// we at least need to generate the local API config file
 		ensureLocalEnvType()
-		generateAPIConfFile("local", Config().API.Runtimes.Local, regen)
+		generateAPIConfFile("local", Config().API.Runtimes.Local, generationNeeded)
 
 		// if we've configured remote environments, then we'll need config files for them
 		for envName, envConf := range Config().API.Runtimes.Remote {
-			generateAPIConfFile(envName, envConf, regen)
+			generateAPIConfFile(envName, envConf, generationNeeded)
 		}
 
 		// --------------------------------------------------------------------
@@ -143,7 +150,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 			Debug("The containerfile used for remote deployment can be used with the following commands (Example): ")
 			Debug("podman build --build-arg ENV=local -f %[1]s -t %[2]s-test-api . && podman run --rm -it -p %[3]s:%[3]s %[2]s-test-api",
 				containerFilePath, Config().AppNameShort, port)
-			Debug("Test it with: curl http://localhost:%d/rest/translation/fr\\?Namespace\\=Common", port)
+			Debug("Test it with: curl http://localhost:%s/rest/translation/fr\\?Namespace\\=Common", port)
 		}
 
 		// --------------------------------------------------------------------
@@ -151,9 +158,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		// --------------------------------------------------------------------
 
 		// what we need for remote deployment - which depend on the targeted platform
-		generator := remoteDeploymentGeneratorRegistry.generators[Config().Deploying.Platform.Type]
-		core.PanicMsgIf(generator == nil, "No deploy config generator found for remote platform '%s'", Config().Deploying.Platform.Type)
-		generator.generateDeployConfig(core.EnsureDir(Config().Deploying.Dir, "remote"))
+		GetRemoteDeploymentGenerator().generateDeployConfig(core.EnsureDir(Config().Deploying.Dir, "remote"))
 
 		// --------------------------------------------------------------------
 		// Finishing

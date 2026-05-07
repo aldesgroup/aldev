@@ -12,7 +12,7 @@ import (
 )
 
 func EnsureFileFromTemplateAndContext(context any, filepath, tpl string, params ...any) {
-	Debug("Making sure this file exists: %s", filepath)
+	Debug("Making sure this file exists and is up-to-date: %s", filepath)
 
 	content := tpl
 	if len(params) > 0 {

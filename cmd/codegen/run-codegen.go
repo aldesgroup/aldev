@@ -120,7 +120,13 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// generation step n°3
-	must(utils.Run("Generating stuff: BO vmaps, BO web models, etc...", codegenCtx, true, "%s", mainRunCmd+" -codegen 3"+regenArg))
+	serversArg := ""
+	if utils.Config().API != nil {
+		if servers := utils.GetRemoteDeploymentGenerator().GetServers(); len(servers) > 0 {
+			serversArg = fmt.Sprintf(" -servers %s", core.MapToString(servers, false, ":", "|"))
+		}
+	}
+	must(utils.Run("Generating stuff: BO vmaps, BO web models, etc...", codegenCtx, true, "%s", mainRunCmd+" -codegen 3"+regenArg+serversArg))
 
 	// generation step n°3-bis
 	if codeHasChanged() {
@@ -167,6 +173,7 @@ func codeComplete() {
 
 var skipCodeCompleteForDirs = []string{"_include", "class"}
 
+// this function looks for recently generated code, completes it with missing tags, and format those tags
 func completeRecentCode(newerThan time.Time, dir string) {
 	if core.InSlice(skipCodeCompleteForDirs, dir) {
 		return
