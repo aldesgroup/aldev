@@ -64,6 +64,10 @@ func (thisGen *azureDeploymentGenerator) GetServers() (servers map[core.EnvType]
 	return
 }
 
+func (thisGen *azureDeploymentGenerator) getPrivateRepoURL() string {
+	return getEnvParamValue("", Config().Deploying.Platform.Config.Global, "domain_name")
+}
+
 // ----------------------------------------------------------------------------
 // Generating the infrastructure deployment config files for Azure
 // ----------------------------------------------------------------------------

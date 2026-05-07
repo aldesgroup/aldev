@@ -35,10 +35,11 @@ func SetCacheDir(cacheDir string) {
 }
 
 type AldevConfig struct {
-	AppName   string    // the name of the app - beware: the key has to be "appname" in the YAML file
-	AppDesc   string    // the description of the app - beware: the key has to be "appdesc" in the YAML file
-	Languages string    // the languages available for this app, seperated by a comma - for example: en,fr,it,de,zh,es
-	Lib       *struct { // must be filled if this project is a library
+	AppName    string    // the name of the app - beware: the key has to be "appname" in the YAML file
+	AppDesc    string    // the description of the app - beware: the key has to be "appdesc" in the YAML file
+	Languages  string    // the languages available for this app, seperated by a comma - for example: en,fr,it,de,zh,es
+	PrivateGit string    // the URL of the private git hosting, if any, without the https:// part, e.g. "my-git.my-company.com"
+	Lib        *struct { // must be filled if this project is a library
 		SrcDir string // where the library source code can be found
 		// Config         string   // the path to the config file for the API, from the API's folder
 		// Install        string   // command that should be run to install stuff, like needed dependencies, etc.

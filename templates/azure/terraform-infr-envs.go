@@ -103,7 +103,7 @@ resource "azuread_application_federated_identity_credential" "gitlab_main" {
   application_id = data.azuread_application.app_gitlab_oidc.id
   display_name   = "gitlab-for-{{.AppNameLower}}-main-commits"
 
-  issuer    = "{gitlab_url}"
+  issuer    = "https://{gitlab_url}"
   subject   = "project_path:{git_repo}:ref_type:branch:ref:main"
   audiences = ["api://AzureADTokenExchange"]
 }
@@ -112,7 +112,7 @@ resource "azuread_application_federated_identity_credential" "gitlab_tagged" {
   application_id = data.azuread_application.app_gitlab_oidc.id
   display_name   = "gitlab-for-{{.AppNameLower}}-tagged-commits"
 
-  issuer    = "{gitlab_url}"
+  issuer    = "https://{gitlab_url}"
   subject   = "project_path:{git_repo}:ref_type:tag:ref:*"
   audiences = ["api://AzureADTokenExchange"]
 }

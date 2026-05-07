@@ -143,7 +143,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		moduleContent := core.ReadFile(path.Join(Config().API.SrcDir, "go.mod"), true) // reads all the go.mod file
 		moduleGoVersion := core.Before(core.After(string(moduleContent), "go "), "\n") // keeps only the go version, i.e. 1.24.3
 		moduleGoVersion = moduleGoVersion[:strings.LastIndex(moduleGoVersion, ".")]    // keeps only the major & middle numbers, i.e. 1.24
-		EnsureFileFromTemplate(containerFilePath, templates.ContainerFILE, moduleGoVersion)
+		EnsureFileFromTemplate(containerFilePath, templates.ContainerFILE, moduleGoVersion, Config().PrivateGit)
 
 		if verbose {
 			port := getEnvPortString(Config().API.Runtimes.Local)

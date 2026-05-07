@@ -10,7 +10,18 @@ WORKDIR /container-api-src
 
 # Copy the dependency files from the host's api folder (optimization)
 COPY {{.API.SrcDir}}/go.mod {{.API.SrcDir}}/go.sum ./
+
+{{ if .PrivateGit -}}
+# The deploy token (username:token) is mounted as a secret so it never ends
+# up in an image layer. go env -w persists GOPRIVATE across any toolchain
+# re-invocation that happens inside this RUN step.
+RUN --mount=type=secret,id=git_token \
+    go env -w GOPRIVATE=%[2]s GONOSUMDB=%[2]s GONOPROXY=%[2]s && \
+    git config --global url."https://$(cat /run/secrets/git_token)@%[2]s/".insteadOf "https://%[2]s/" && \
+    go mod download
+{{- else }}
 RUN go mod download
+{{- end }}
 
 # Copy the rest of the local api folder to the container's current WORKDIR
 COPY {{.API.SrcDir}}/ .
@@ -20,7 +31,7 @@ COPY {{.API.SrcDir}}/ .
 # -s: Omit Symbol Table, harder reverse-engineering
 # -w: Omit DWARF, Removes DWARF debugging information.
 # CGO_ENABLED=0: no C code, pure Go, static binary starting a bit faster
-# GOOS=linux: making sure we're builing for a Linux env
+# GOOS=linux: making sure we're building for a Linux env
 RUN CGO_ENABLED=0 GOOS=linux GOAMD64=v3 go build -ldflags="-s -w" -o /bin/{{.AppNameKebab}}-api ./main
 
 # Stage 2: Final Runtime
