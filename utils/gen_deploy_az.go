@@ -136,6 +136,7 @@ func (thisGen *azureDeploymentGenerator) generateAPIMDeployment(remoteDir string
 
 	// this is the main file generically describing the infrastructure, for all the environment types
 	// so it's meant to be used by each environment with a custom config
+	core.EnsureDir(path.Join(remoteDir, apimDir))
 	EnsureFileFromTemplate(path.Join(remoteDir, apimDir, "main.tf"), replaceIn("global", global, azure.TerraformAzureAPIMxCOMMON, "resource_ns"))
 
 	// now dealing for each environment
