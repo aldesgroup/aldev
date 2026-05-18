@@ -36,11 +36,12 @@ func CheckDeps(ctx CancelableContext, printDeps bool) bool {
 	// results
 	var nativeDeps, apiDeps, webDeps string
 	var goDep bool
+	var apiOutdatedDeps []*Module
 
 	// checking the outdated deps in parallel
 	var wg sync.WaitGroup
 	wg.Go(func() { nativeDeps = checkNativeDeps() })
-	wg.Go(func() { apiDeps, goDep = checkAPIDeps() })
+	wg.Go(func() { apiDeps, apiOutdatedDeps, goDep = checkAPIDeps() })
 	wg.Go(func() { webDeps = checkWebappDeps() })
 	wg.Wait()
 
@@ -57,13 +58,18 @@ func CheckDeps(ctx CancelableContext, printDeps bool) bool {
 					Info("Fix it with 'cd %s && go get go@latest && go mod tidy ; cd ..', then run 'aldev doctor' again.", GetGoSrcDir())
 				}
 			} else {
-				// are we
+				// building the suggested command to update the dependencies
+				suggestedUpdates := []string{}
+				for _, dep := range apiOutdatedDeps {
+					suggestedUpdates = append(suggestedUpdates, fmt.Sprintf("%s@latest", dep.Path))
+				}
+				suggestedUpdatesStr := strings.Join(suggestedUpdates, " \\\n")
 
 				// suggestion about the packages used by the project
 				if GetGoSrcDir() == "." {
-					Info("To fix this, you can try: go get -u -t ./... && go mod tidy")
+					Info("To fix this, you can try: \n\ngo get %s && go mod tidy", suggestedUpdatesStr)
 				} else {
-					Info("To fix this, you can try: cd %s && go get -u -t ./... && go mod tidy ; cd ..", GetGoSrcDir())
+					Info("To fix this, you can try: \n\ncd %s && go get %s && go mod tidy ; cd ..", GetGoSrcDir(), suggestedUpdatesStr)
 				}
 			}
 		}
@@ -101,12 +107,12 @@ func CheckDeps(ctx CancelableContext, printDeps bool) bool {
 }
 
 // Checking the API's dependencies
-func checkAPIDeps() (string, bool) {
+func checkAPIDeps() (string, []*Module, bool) {
 	if IsDevAPI() || IsDevLibrary() {
 		// controlling the Go version first
 		goVersion := string(RunAndGet("Checking Go version", GetGoSrcDir(), true, "%s", "go list -mod=mod -m -u go"))
 		if strings.HasSuffix((strings.TrimSpace(goVersion)), "]") {
-			return goVersion, true
+			return goVersion, nil, true
 		}
 
 		// this list all the dependencies, not only the outdated ones
@@ -128,11 +134,11 @@ func checkAPIDeps() (string, bool) {
 		if len(outdated) > 0 {
 			outdatedBytes, errJson := json.MarshalIndent(outdated, "", "  ")
 			core.PanicMsgIfErr(errJson, "Could not JSON-marshal the outdated modules")
-			return string(outdatedBytes), false
+			return string(outdatedBytes), outdated, false
 		}
 	}
 
-	return "", false
+	return "", nil, false
 }
 
 // Checking the web app's dependencies
