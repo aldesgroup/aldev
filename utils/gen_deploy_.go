@@ -83,7 +83,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 	}
 
 	// do we need to generate stuff?
-	generationNeeded := regen
+	generationNeeded := regen || !core.DirExists(Config().Deploying.Dir)
 	if regen {
 		Info("Regeneration has been required!")
 	}
