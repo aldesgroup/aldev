@@ -5,6 +5,8 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/aldesgroup/aldev/templates"
 	core "github.com/aldesgroup/corego"
 )
@@ -13,8 +15,10 @@ const (
 	TagHOTSWAPPED = "___HOTSWAPPED___"
 )
 
-// Installing Git hooks to unify our practices
-func InstallGitHooks(ctx CancelableContext) {
+// Doing some Git setup, like installing hooks, to unify our practices across projects
+func SetupGit(ctx CancelableContext) {
+
+	// installing hooks
 	if core.DirExists(".git") {
 		pcFile := ".git/hooks/pre-commit"
 		EnsureFileFromTemplate(pcFile, templates.GitHookPRECOMMIT, TagHOTSWAPPED)
@@ -27,6 +31,24 @@ func InstallGitHooks(ctx CancelableContext) {
 			Run("Activating the commit-msg hook", ctx, false, "chmod +x %s", cmFile)
 		}
 	}
+
+	// checking the remote has a "releases" branch, and if not, creating it
+	if !core.DirExists(".git") {
+		return
+	}
+	if !releasesBranchExist() {
+		Run("Creating the 'releases' branch on the remote", ctx, true, "git push origin HEAD:releases")
+	}
+}
+
+func releasesBranchExist() bool {
+	output := RunAndGet("Getting the list of remote branches", ".", false, "git branch --remote")
+	for _, branch := range strings.Split(string(output), "\n") {
+		if strings.TrimSpace(branch) == "origin/releases" {
+			return true
+		}
+	}
+	return false
 }
 
 type versionObject struct {
