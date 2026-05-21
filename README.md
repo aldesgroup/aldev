@@ -17,4 +17,4 @@ Each must be installed independently by the developer prior to using the relevan
 | [formattag](https://github.com/momaek/formattag)      | Align Go struct tags     | None found ⚠️  |
 | [gofumpt](https://github.com/mvdan/gofumpt)           | Format the whole Go code | `BSD-3-Clause` |
 | [gomodifytags](https://github.com/fatih/gomodifytags) | Add missing JSON tags    | `BSD-3-Clause` |
-
+| [svu](github.com/caarlos0/svu)                        | Handling versions        | `MIT`          |

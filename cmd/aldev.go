@@ -104,24 +104,18 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// --- one-time stuff
 
-	// one time thing: install the pre-commit hook
-	go utils.InstallGitHooks(aldevCtx)
+	// one time thing: do some Git setup
+	go utils.SetupGit(aldevCtx)
 
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
 	if swapCode {
 		go utils.Run("Allowing HMR to work even with dependencies", aldevCtx, true, "aldev codeswap")
-		// slog.Debug("Sleeping")
-		// time.Sleep(100 * time.Millisecond) // allowing the swap to be done before the main loop starts
-		// slog.Debug("Slept")
 	}
 
 	// --- main loop stuff
 
 	// for which file changes are we going to restart the main loop?
 	watched := []string{cfgFileName} // Aldev's config
-	// if utils.Config().API != nil {
-	// 	watched = append(watched, path.Join(utils.GetGoSrcDir()))
-	// }
 
 	// adding a watcher to detect some file changes
 	watcher := utils.WatcherFor(watched...)
