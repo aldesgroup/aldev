@@ -46,6 +46,7 @@ func (thisGen *azureDeploymentGenerator) generateDeployConfig(remoteDir string) 
 			"env-SANDBOX", "sub-SANDBOX",
 			"env-STAGING", "sub-STAGING",
 			"env-PRODUCTION", "sub-PRODUCTION",
+			"GITLAB_CID_SNAKE", "SOME_SPACE",
 		}
 		EnsureFileFromTemplate(".gitlab-ci.yml", replaceIn("", Config().Deploying.Platform.Config.Global, azure.GitlabAzureCIxCDxCONF, replacements...))
 	} else {
@@ -86,7 +87,10 @@ func (thisGen *azureDeploymentGenerator) generateInfraDeployment(remoteDir strin
 
 	// the main file
 	if isGitlabCICD {
-		global["gitlab_cid"] = Config().Deploying.CICD.Config["gitlab_cid"]
+		gitlabClientID := Config().Deploying.CICD.Config["gitlab_cid"]
+		global["gitlab_cid"] = gitlabClientID
+		global["GITLAB_CID_SNAKE"] = strings.ToUpper(strings.ReplaceAll(gitlabClientID, "-", "_"))
+		global["SOME_SPACE"] = strings.Repeat(" ", len(global["GITLAB_CID_SNAKE"])-3)
 		global["gitlab_url"] = Config().Deploying.CICD.Config["gitlab_url"]
 		global["git_repo"] = getGitRepo()
 		EnsureFileFromTemplate(path.Join(globalDir, "main.tf"),

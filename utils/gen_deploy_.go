@@ -186,6 +186,7 @@ func generateAPIConfFile(envName string, envConfig *APIRuntimeConfig, regen bool
 
 	// building the base config for the current environment
 	base := mergeYAMLNodes(&Config().API.Runtimes.Common.Base, &envConfig.Base)
+	base = prependValue("version", "_$_VERSION_$_", base)
 	base = prependValue("port", getEnvPortString(envConfig), base)
 	base = prependValue("appdesc", Config().AppDesc, base)
 	base = prependValue("appname", Config().AppName, base)

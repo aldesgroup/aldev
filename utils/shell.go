@@ -15,10 +15,29 @@ import (
 
 func Run(whyRunThis string, ctx CancelableContext, logStart bool, commandAsString string, params ...any) bool {
 	// splitting the command elements as expected by the os/exec package
-	commandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
+	rawCommandElements := strings.Split(fmt.Sprintf(commandAsString, params...), " ")
+	command := rawCommandElements[0]
+
+	// the command args
+	commandArgs := []string{}
+	coalescedArg := ""
+	for _, rawElement := range rawCommandElements[1:] {
+		if strings.HasPrefix(rawElement, "\"") && !strings.HasSuffix(rawElement, "\"") {
+			coalescedArg = rawElement[1:]
+		} else if coalescedArg != "" {
+			coalescedArg += " " + rawElement
+			if strings.HasSuffix(rawElement, "\"") {
+				coalescedArg = coalescedArg[:len(coalescedArg)-1]
+				commandArgs = append(commandArgs, coalescedArg)
+				coalescedArg = ""
+			}
+		} else {
+			commandArgs = append(commandArgs, rawElement)
+		}
+	}
 
 	// running the command
-	return runCmd(whyRunThis, ctx, logStart, exec.CommandContext(ctx, commandElements[0], commandElements[1:]...))
+	return runCmd(whyRunThis, ctx, logStart, exec.CommandContext(ctx, command, commandArgs...))
 }
 
 func QuickRun(whyRunThis string, commandAsString string, params ...any) bool {

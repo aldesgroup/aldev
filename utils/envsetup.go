@@ -15,8 +15,15 @@ const (
 	TagHOTSWAPPED = "___HOTSWAPPED___"
 )
 
-// Doing some Git setup, like installing hooks, to unify our practices across projects
-func SetupGit(ctx CancelableContext) {
+// Doing some setup of the dev environment, like installing hooks, to unify our practices across projects
+func SetupDevEnv(ctx CancelableContext) {
+	// making sure we have a local temp folder
+	core.EnsureDir("tmp")
+
+	// making sure a VERSION file exists
+	if !core.FileExists(versionFilePath) {
+		core.WriteStringToFile(versionFilePath, "v0.0.0")
+	}
 
 	// installing hooks
 	if core.DirExists(".git") {

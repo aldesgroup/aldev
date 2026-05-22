@@ -104,8 +104,8 @@ func aldevRun(command *cobra.Command, args []string) {
 
 	// --- one-time stuff
 
-	// one time thing: do some Git setup
-	go utils.SetupGit(aldevCtx)
+	// one time thing: do some dev env setup
+	go utils.SetupDevEnv(aldevCtx)
 
 	// one time thing: using Aldev swap when locally developping the dependencies alongside
 	if swapCode {

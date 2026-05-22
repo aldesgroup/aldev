@@ -95,6 +95,9 @@ resource "azuread_service_principal" "sp_{resource_ns}_{{.AppNameLower}}" {
 const TerraformAzureINFRAxGLOBALnGITLAB = TerraformAzureINFRAxGLOBAL + `
 # --------------------------------------------------------------------------- #
 # --- Allowing Gitlab to deploy stuff on Azure for this app
+# 
+# MAKE SURE THE APP REG USED HERE FOR GITLAB HAS LESS THAN 20 CREDENTIALS,
+# ELSE USE A NEW APP REG DEDICATED TO GITLAB AND PUT ITS NAME IN ALDEV CONFIG
 # --------------------------------------------------------------------------- #
 
 data "azuread_application" "app_gitlab_oidc" {
@@ -110,12 +113,12 @@ resource "azuread_application_federated_identity_credential" "gitlab_main" {
   audiences = ["api://AzureADTokenExchange"]
 }
 
-resource "azuread_application_federated_identity_credential" "gitlab_tagged" {
+resource "azuread_application_federated_identity_credential" "gitlab_releases" {
   application_id = data.azuread_application.app_gitlab_oidc.id
-  display_name   = "gitlab-for-{{.AppNameLower}}-tagged-commits"
+  display_name   = "gitlab-for-{{.AppNameLower}}-release-commits"
 
   issuer    = "https://{gitlab_url}"
-  subject   = "project_path:{git_repo}:ref_type:tag:ref:*"
+  subject   = "project_path:{git_repo}:ref_type:branch:ref:releases"
   audiences = ["api://AzureADTokenExchange"]
 }
 `

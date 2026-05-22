@@ -109,12 +109,12 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 
 	// asking for confirmation before making the release
 	if !askConfirm(fmt.Sprintf("Do you want to go from %s to %s?", currentVersionFromGit, nextVersion)) {
-		println("\nAbandoned")
+		println("\nRelease cancelled")
 		return
 	}
 
 	// new Git tag
-	if newTagOK := QuickRun("New git tag", "git tag -a -m \"%s release\" %s", releaseStr, nextVersion); !newTagOK {
+	if newTagOK := QuickRun("New git tag", "git tag %s", nextVersion); !newTagOK {
 		core.PanicMsg("Weird... Somehow we failed to create new Git tag '%s'", nextVersion)
 	}
 

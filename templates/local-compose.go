@@ -17,9 +17,18 @@ services:
       - ../../{{.ResolvedBinDir}}:/api/bin:z
       - ../../{{.API.SrcDir}}:/api/src:z
       - ../../{{.API.DataDir}}:/api/data:z
+      - ../../tmp:/api/tmp:z
+      - ../../VERSION:/api/VERSION:ro,z
 
-    # Executes the binary. Running it directly (not via a shell script) helps with signal handling (SIGTERM)
-    command: ./bin/{{.AppNameKebab}}-api -config src/conf-local.yaml
+    # Executes the binary with a dynamically generated config file that includes the app version
+    command:
+        - sh
+        - -c
+        - |
+            cp src/conf-local.yaml tmp/conf-local.yaml
+            APP_VERSION="$$(cat /api/VERSION)+"
+            sed -i "s|_\$$_VERSION_\$$_|$${APP_VERSION}|g" tmp/conf-local.yaml
+            exec ./bin/{{.AppNameKebab}}-api -config tmp/conf-local.yaml
 
     # This allows several services to talk to each other locally
     networks:

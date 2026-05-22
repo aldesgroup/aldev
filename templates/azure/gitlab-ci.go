@@ -6,6 +6,11 @@ stages: [build, deploy_test, deploy_prod]
 
 # --------------------------------------------------------------------------- #
 # --- This is the default behaviour of each step
+#
+# MAKE SURE GITLAB KNOWS THE VALUES FOR THESE VARIABLES:
+# - ALDESGROUPE_PDT_GITLAB_TERRAFORM_TENANT_ID
+# - ALDESGROUPE_PDT_GITLAB_TERRAFORM_CLIENT_ID
+# in the project's or its group's CI/CD settings, for the deploy steps to work.
 # --------------------------------------------------------------------------- #
 
 default:
@@ -13,13 +18,14 @@ default:
         AZURE_ID_TOKEN:
             aud: api://AzureADTokenExchange
     before_script:
+        - VERSION=$(cat VERSION)
         - |
-            az login                                    \
-              --service-principal                       \
-              --tenant                 ${ARM_TENANT_ID} \
-              --username               ${ARM_CLIENT_ID} \
-              --federated-token        $AZURE_ID_TOKEN  \
-              --output                 none             \
+            az login                                   {SOME_SPACE} \
+              --service-principal                      {SOME_SPACE} \
+              --tenant                 ${{GITLAB_CID_SNAKE}_TENANT_ID} \
+              --username               ${{GITLAB_CID_SNAKE}_CLIENT_ID} \
+              --federated-token        $AZURE_ID_TOKEN {SOME_SPACE} \
+              --output                 none            {SOME_SPACE} \
               --allow-no-subscriptions
 
 # --------------------------------------------------------------------------- #
@@ -48,8 +54,9 @@ build_{env-SANDBOX}:
         - *azure_set_mgmt_sub
         - *acr_podman_login
         - *git_token_setup
+        - sed -i "s/_\$_VERSION_\$_/${CI_COMMIT_SHORT_SHA}/g" api/conf-{env-SANDBOX}.yaml
         - export IMAGE={acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_SHORT_SHA}
-        - podman build -t $IMAGE -f deploy/Containerfile --build-arg ENV={env-SANDBOX} --secret id=git_token,src=/tmp/git_token .
+        - podman build -t $IMAGE -f {{.Deploying.Dir}}/Containerfile --build-arg ENV={env-SANDBOX} --secret id=git_token,src=/tmp/git_token .
         - podman push $IMAGE
     rules:
         - if: '$CI_COMMIT_BRANCH == "main"'
@@ -61,10 +68,10 @@ deploy_{env-SANDBOX}:
     needs: [build_{env-SANDBOX}]
     script:
         - |
-            az containerapp update                                                    \
-              --subscription   {sub-SANDBOX}                                           \
-              --name           aca-{resource_ns}-{env-SANDBOX}-{{.AppNameLower}}                                 \
-              --resource-group rg-{resource_ns}-{env-SANDBOX}-{{.AppNameLower}}                                  \
+            az containerapp update                                                     \
+              --subscription   {sub-SANDBOX}                                            \
+              --name           aca-{resource_ns}-{env-SANDBOX}-{{.AppNameLower}}                                  \
+              --resource-group rg-{resource_ns}-{env-SANDBOX}-{{.AppNameLower}}                                   \
               --container-name {{.AppNameKebab}}-api                                         \
               --image          {acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_SHORT_SHA} \
               --output         none
@@ -85,14 +92,16 @@ build_{env-STAGING}_n_{env-PRODUCTION}:
         - *azure_set_mgmt_sub
         - *acr_podman_login
         - *git_token_setup
-        - export IMAGE_STAGING={acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_TAG}-{env-STAGING}
-        - podman build -t $IMAGE_STAGING -f deploy/Containerfile --build-arg ENV={env-STAGING} --secret id=git_token,src=/tmp/git_token .
+        - sed -i "s/_\$_VERSION_\$_/$VERSION/g" api/conf-{env-STAGING}.yaml
+        - export IMAGE_STAGING={acr_name}.azurecr.io/{{.AppNameKebab}}-api:$VERSION-{env-STAGING}
+        - podman build -t $IMAGE_STAGING -f {{.Deploying.Dir}}/Containerfile --build-arg ENV={env-STAGING} --secret id=git_token,src=/tmp/git_token .
         - podman push $IMAGE_STAGING
-        - export IMAGE_PRODUCTION={acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_TAG}-{env-PRODUCTION}
-        - podman build -t $IMAGE_PRODUCTION -f deploy/Containerfile --build-arg ENV={env-PRODUCTION} --secret id=git_token,src=/tmp/git_token .
+        - sed -i "s/_\$_VERSION_\$_/$VERSION/g" api/conf-{env-PRODUCTION}.yaml
+        - export IMAGE_PRODUCTION={acr_name}.azurecr.io/{{.AppNameKebab}}-api:$VERSION-{env-PRODUCTION}
+        - podman build -t $IMAGE_PRODUCTION -f {{.Deploying.Dir}}/Containerfile --build-arg ENV={env-PRODUCTION} --secret id=git_token,src=/tmp/git_token .
         - podman push $IMAGE_PRODUCTION
     rules:
-        - if: "$CI_COMMIT_TAG"
+        - if: '$CI_COMMIT_BRANCH == "releases"'
           when: on_success
 
 deploy_{env-STAGING}:
@@ -101,17 +110,17 @@ deploy_{env-STAGING}:
     needs: [build_{env-STAGING}_n_{env-PRODUCTION}]
     script:
         - |
-            az containerapp update                                                  \
-              --subscription   {sub-STAGING}                                         \
-              --name           aca-{resource_ns}-{env-STAGING}-{{.AppNameLower}}                               \
-              --resource-group rg-{resource_ns}-{env-STAGING}-{{.AppNameLower}}                                \
-              --container-name {{.AppNameKebab}}-api                                       \
-              --image          {acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_TAG}-{env-STAGING} \
+            az containerapp update                                           \
+              --subscription   {sub-STAGING}                                  \
+              --name           aca-{resource_ns}-{env-STAGING}-{{.AppNameLower}}                        \
+              --resource-group rg-{resource_ns}-{env-STAGING}-{{.AppNameLower}}                         \
+              --container-name {{.AppNameKebab}}-api                               \
+              --image          {acr_name}.azurecr.io/{{.AppNameKebab}}-api:$VERSION-{env-STAGING} \
               --output         none
     environment:
         name: {env-STAGING}
     rules:
-        - if: "$CI_COMMIT_TAG"
+        - if: '$CI_COMMIT_BRANCH == "releases"'
           when: on_success
 
 deploy_{env-PRODUCTION}:
@@ -120,19 +129,21 @@ deploy_{env-PRODUCTION}:
     needs: [deploy_{env-STAGING}]
     script:
         - |
-            az containerapp update                                                  \
-              --subscription   {sub-PRODUCTION}                                         \
-              --name           aca-{resource_ns}-{env-PRODUCTION}-{{.AppNameLower}}                               \
-              --resource-group rg-{resource_ns}-{env-PRODUCTION}-{{.AppNameLower}}                                \
-              --container-name {{.AppNameKebab}}-api                                       \
-              --image          {acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_TAG}-{env-PRODUCTION} \
+            az containerapp update                                           \
+              --subscription   {sub-PRODUCTION}                                  \
+              --name           aca-{resource_ns}-{env-PRODUCTION}-{{.AppNameLower}}                        \
+              --resource-group rg-{resource_ns}-{env-PRODUCTION}-{{.AppNameLower}}                         \
+              --container-name {{.AppNameKebab}}-api                               \
+              --image          {acr_name}.azurecr.io/{{.AppNameKebab}}-api:$VERSION-{env-PRODUCTION} \
               --output         none
     environment:
         name: {env-PRODUCTION}
     rules:
-        - if: "$CI_COMMIT_TAG"
+        - if: '$CI_COMMIT_BRANCH == "releases"'
           when: manual
+`
 
+const GitlabAzureCIxCDxCONFWithRollbacks = `
 # # ----------------------------
 # # QUA: tag last-known-good after successful QUA deploy
 # # ----------------------------
