@@ -96,6 +96,7 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 		releaseStr = "major"
 	}
 
+	// getting the current version
 	currentVersionFromGit := strings.TrimSpace(string(RunAndGet("Getting the current version", ".", false, "svu current")))
 
 	// a bit of a sanity check to make sure the VERSION file is in sync with the git tags
@@ -120,13 +121,19 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 
 	// updating (maybe creating) the VERSION file
 	core.WriteStringToFile(versionFilePath, "%s", nextVersion)
-	if addOK := QuickRun("Adding the updated VERSION file to Git", "git add %s", versionFilePath); !addOK {
-		core.PanicMsg("Could not add the updated VERSION file to Git")
+
+	// updating the API doc
+	core.ReplaceInFile(Config().API.DocPath, map[string]string{"v0.0.1": nextVersion})
+	core.ReplaceInFile(Config().API.DocReport, map[string]string{"v0.0.1": nextVersion})
+
+	// git-adding the VERSION file
+	if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.DocPath, Config().API.DocReport); !addOK {
+		core.PanicMsg("Could not add the updated VERSION file + API docs to Git")
 	}
 
 	// commiting the updated VERSION file
-	if commitOK := QuickRun("Committing the updated VERSION file", "git commit -m \"dev: bumped version %s to %s\"", currentVersionFromGit, nextVersion); !commitOK {
-		core.PanicMsg("Could not commit the updated VERSION file")
+	if commitOK := QuickRun("Committing the updated VERSION file + API docs", "git commit -m \"dev: bumped version %s to %s\"", currentVersionFromGit, nextVersion); !commitOK {
+		core.PanicMsg("Could not commit the updated VERSION file + API docs to Git")
 	}
 
 	// pushing to the main branch

@@ -43,6 +43,25 @@ default:
 .git_token_setup: &git_token_setup
     - echo "$GIT_DEPLOY_USER:$GIT_DEPLOY_TOKEN" > /tmp/git_token
 
+# Rules shared by all dev pipeline jobs.
+.dev_pipeline_rules: &dev_pipeline_rules
+    - if: "$CI_COMMIT_MESSAGE =~ /^dev: bumped version/"
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+
+# Rules shared by all releases pipeline jobs (except deploy_prd which is manual).
+.releases_pipeline_rules: &releases_pipeline_rules
+    - if: '$CI_COMMIT_BRANCH == "releases"'
+      when: on_success
+
+# Runs terraform init + apply in the given directory (ARM_USE_CLI lets TF reuse the az login).
+.apim_tf_apply: &apim_tf_apply
+    - export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+    - export ARM_USE_CLI=true
+    - az account set --subscription {identity_sub_name} && terraform -chdir=$TF_DIR init
+    - terraform -chdir=$TF_DIR apply -auto-approve
+
 # --------------------------------------------------------------------------- #
 # --- Building & deploying on {env-SANDBOX}, with each new commit on main
 # --------------------------------------------------------------------------- #
@@ -58,9 +77,7 @@ build_{env-SANDBOX}:
         - export IMAGE={acr_name}.azurecr.io/{{.AppNameKebab}}-api:${CI_COMMIT_SHORT_SHA}
         - podman build -t $IMAGE -f {{.Deploying.Dir}}/Containerfile --build-arg ENV={env-SANDBOX} --secret id=git_token,src=/tmp/git_token .
         - podman push $IMAGE
-    rules:
-        - if: '$CI_COMMIT_BRANCH == "main"'
-          when: on_success
+    rules: *dev_pipeline_rules
 
 deploy_{env-SANDBOX}:
     stage: deploy_test
@@ -77,9 +94,20 @@ deploy_{env-SANDBOX}:
               --output         none
     environment:
         name: {env-SANDBOX}
-    rules:
-        - if: '$CI_COMMIT_BRANCH == "main"'
-          when: on_success
+    rules: *dev_pipeline_rules
+
+apim_{env-SANDBOX}:
+    stage: deploy_test
+    tags: [{resource_ns}, {env-SANDBOX}]
+    needs: [deploy_{env-SANDBOX}]
+    variables:
+        TF_DIR: {{.Deploying.Dir}}/remote/b-apim/1-{env-SANDBOX}
+    script:
+        - *azure_set_mgmt_sub
+        - *apim_tf_apply
+    environment:
+        name: {env-SANDBOX}
+    rules: *dev_pipeline_rules
 
 # --------------------------------------------------------------------------- #
 # --- Building & deploying on {env-STAGING} & {env-PRODUCTION}, with each new tag
@@ -100,9 +128,7 @@ build_{env-STAGING}_n_{env-PRODUCTION}:
         - export IMAGE_PRODUCTION={acr_name}.azurecr.io/{{.AppNameKebab}}-api:$VERSION-{env-PRODUCTION}
         - podman build -t $IMAGE_PRODUCTION -f {{.Deploying.Dir}}/Containerfile --build-arg ENV={env-PRODUCTION} --secret id=git_token,src=/tmp/git_token .
         - podman push $IMAGE_PRODUCTION
-    rules:
-        - if: '$CI_COMMIT_BRANCH == "releases"'
-          when: on_success
+    rules: *releases_pipeline_rules
 
 deploy_{env-STAGING}:
     stage: deploy_test
@@ -119,9 +145,20 @@ deploy_{env-STAGING}:
               --output         none
     environment:
         name: {env-STAGING}
-    rules:
-        - if: '$CI_COMMIT_BRANCH == "releases"'
-          when: on_success
+    rules: *releases_pipeline_rules
+
+apim_{env-STAGING}:
+    stage: deploy_test
+    tags: [{resource_ns}, {env-STAGING}]
+    needs: [deploy_{env-STAGING}]
+    variables:
+        TF_DIR: {{.Deploying.Dir}}/remote/b-apim/2-{env-STAGING}
+    script:
+        - *azure_set_mgmt_sub
+        - *apim_tf_apply
+    environment:
+        name: {env-STAGING}
+    rules: *releases_pipeline_rules
 
 deploy_{env-PRODUCTION}:
     stage: deploy_prod
@@ -141,6 +178,19 @@ deploy_{env-PRODUCTION}:
     rules:
         - if: '$CI_COMMIT_BRANCH == "releases"'
           when: manual
+
+apim_{env-PRODUCTION}:
+    stage: deploy_prod
+    tags: [{resource_ns}, {env-PRODUCTION}]
+    needs: [deploy_{env-PRODUCTION}]
+    variables:
+        TF_DIR: {{.Deploying.Dir}}/remote/b-apim/3-{env-PRODUCTION}
+    script:
+        - *azure_set_mgmt_sub
+        - *apim_tf_apply
+    environment:
+        name: {env-PRODUCTION}
+    rules: *releases_pipeline_rules
 `
 
 const GitlabAzureCIxCDxCONFWithRollbacks = `

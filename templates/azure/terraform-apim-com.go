@@ -114,7 +114,7 @@ resource "azurerm_api_management_api" "api" {
   # detected by Terraform and pushed to APIM on the next apply.
   import {
     content_format = "openapi"
-    content_value  = file("../../../../{{.API.DocPath}}")
+    content_value  = replace(file("../../../../{{.API.DocPath}}"), "title: {{.AppName}}", "title: {{.AppName}} (${var.config.env})")
   }
 }
 

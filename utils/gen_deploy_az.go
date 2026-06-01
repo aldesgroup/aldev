@@ -42,7 +42,8 @@ func (thisGen *azureDeploymentGenerator) generateDeployConfig(remoteDir string) 
 	// the Gitlab CI/CD conf
 	if Config().Deploying.CICD != nil && Config().Deploying.CICD.Type == "gitlab" {
 		replacements := []string{
-			"management_sub_name", "acr_name", "resource_ns",
+			"management_sub_name", "identity_sub_name",
+			"acr_name", "resource_ns",
 			"env-SANDBOX", "sub-SANDBOX",
 			"env-STAGING", "sub-STAGING",
 			"env-PRODUCTION", "sub-PRODUCTION",
@@ -63,10 +64,6 @@ func (thisGen *azureDeploymentGenerator) GetServers() (servers map[core.EnvType]
 	}
 
 	return
-}
-
-func (thisGen *azureDeploymentGenerator) getPrivateRepoURL() string {
-	return getEnvParamValue("", Config().Deploying.Platform.Config.Global, "domain_name")
 }
 
 // ----------------------------------------------------------------------------
