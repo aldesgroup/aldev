@@ -116,7 +116,7 @@ func (thisGen *azureDeploymentGenerator) generateInfraDeployment(remoteDir strin
 		envParams["port"] = strconv.Itoa(getRemotePort(envName))
 
 		// creating / customizing the Terraform main file for the current env
-		replacements := []string{"location", "identity_sub_name", "management_sub_name", "environment_sub_name", "acr_name", "acr_rg", "domain_name", "port"}
+		replacements := []string{"location", "identity_sub_name", "management_sub_name", "environment_sub_name", "acr_name", "acr_rg", "domain_name", "port", "apim_name", "apim_rg"}
 		EnsureFileFromTemplate(path.Join(envDir, "main.tf"), replaceIn(envName, envParams, azure.TerraformAzureINFRAxENV, replacements...), envName)
 
 		// keeping track of the environment we've just dealt with

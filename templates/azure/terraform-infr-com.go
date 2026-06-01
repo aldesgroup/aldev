@@ -17,6 +17,8 @@ variable "config" {
     acr_rg               = string # The resource group the container registry belongs to
     domain_name          = string # The full domain name, something like: companyname.com
     port                 = number # The port the API will listen to
+    apim_name            = string # The name of the APIM instance protecting this API
+    apim_rg              = string # The resource group the APIM instance belongs to
   })
 }
 
@@ -128,7 +130,14 @@ data "azurerm_container_registry" "acr" {
   resource_group_name = var.config.acr_rg
 }
 
-# 6) AcrPull role for our UAI on ACR
+# 6) APIM (data-only — used to read outbound IPs for ACA ingress restriction)
+data "azurerm_api_management" "apim" {
+  provider            = azurerm.management_sub
+  name                = var.config.apim_name
+  resource_group_name = var.config.apim_rg
+}
+
+# 7) AcrPull role for our UAI on ACR
 resource "azurerm_role_assignment" "acr_pull" {
   provider             = azurerm.identity_sub
   principal_id         = azurerm_user_assigned_identity.uai.principal_id
@@ -136,7 +145,7 @@ resource "azurerm_role_assignment" "acr_pull" {
   scope                = data.azurerm_container_registry.acr.id
 }
 
-# 7) Key Vault
+# 8) Key Vault
 data "azurerm_client_config" "me" {
   provider = azurerm.global
 }
@@ -269,6 +278,16 @@ resource "azurerm_container_app" "aca" {
   ingress {
     external_enabled = true
     target_port      = var.config.port
+
+    # Allow only APIM outbound IPs; everything else is implicitly denied by Azure.
+    dynamic "ip_security_restriction" {
+      for_each = data.azurerm_api_management.apim.public_ip_addresses
+      content {
+        name             = "allow-apim-${ip_security_restriction.key}"
+        action           = "Allow"
+        ip_address_range = "${ip_security_restriction.value}/32"
+      }
+    }
 
     traffic_weight {
       label           = "stable"

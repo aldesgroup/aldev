@@ -39,6 +39,9 @@ locals {
     domain_name = "{domain_name}"
     # The port the API will listen to
     port = "{port}"
+    # The APIM instance protecting this API
+    apim_name = "{apim_name}"
+    apim_rg   = "{apim_rg}"
   }
 }
 
