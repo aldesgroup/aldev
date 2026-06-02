@@ -137,8 +137,10 @@ func devUp(noServe bool) {
 	if Run("Building & code-generating", codeGenCtx, false, "aldev codegen %s", options) && IsDevAPI() && !noServe {
 
 		// locally deploying the API with 3 instances
-		QuickRun("Starting the API", "podman-compose -f %s/local/compose.yaml up --scale %s_api=%d",
-			Config().Deploying.Dir, Config().AppNameShort, Config().API.LocalInstances)
+		if Config().Deploying != nil && Config().Deploying.Dir != "" {
+			QuickRun("Starting the API", "podman-compose -f %s/local/compose.yaml up --scale %s_api=%d",
+				Config().Deploying.Dir, Config().AppNameShort, Config().API.LocalInstances)
+		}
 	}
 }
 

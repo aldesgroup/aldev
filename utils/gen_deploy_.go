@@ -65,7 +65,24 @@ func GetRemoteDeploymentGenerator() iRemoteDeploymentGenerator {
 // ----------------------------------------------------------------------------
 
 func GenerateDeployFiles(ctx CancelableContext) {
-	if Config().Deploying == nil {
+	// --------------------------------------------------------------------
+	// API runtimes configuration
+	// --------------------------------------------------------------------
+
+	// we at least need to generate the local API config file
+	ensureLocalEnvType()
+	generateAPIConfFile("local", Config().API.Runtimes.Local, regen)
+
+	// if we've configured remote environments, then we'll need config files for them
+	for envName, envConf := range Config().API.Runtimes.Remote {
+		generateAPIConfFile(envName, envConf, regen)
+	}
+
+	// --------------------------------------------------------------------
+	// Deployment-related configuration
+	// --------------------------------------------------------------------
+
+	if Config().Deploying == nil || Config().Deploying.Dir == "" {
 		Info("No 'deploying' section in the config")
 		return
 	}
@@ -114,19 +131,6 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		if !core.SlicesEquals(configuredEnvs, deployedEnvs, true) {
 			core.PanicMsg("The configured API runtimes (%s) and the deployed environments (%s) don't match!",
 				strings.Join(configuredEnvs, ", "), strings.Join(deployedEnvs, ", "))
-		}
-
-		// --------------------------------------------------------------------
-		// API runtimes configuration
-		// --------------------------------------------------------------------
-
-		// we at least need to generate the local API config file
-		ensureLocalEnvType()
-		generateAPIConfFile("local", Config().API.Runtimes.Local, generationNeeded)
-
-		// if we've configured remote environments, then we'll need config files for them
-		for envName, envConf := range Config().API.Runtimes.Remote {
-			generateAPIConfFile(envName, envConf, generationNeeded)
 		}
 
 		// --------------------------------------------------------------------
