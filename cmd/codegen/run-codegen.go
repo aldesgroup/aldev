@@ -121,7 +121,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 
 	// generation step n°3
 	serversArg := ""
-	if utils.Config().API != nil && utils.Config().Deploying != nil {
+	if utils.Config().API != nil && utils.Config().Deploying != nil && utils.Config().Deploying.Platform != nil {
 		if servers := utils.GetRemoteDeploymentGenerator().GetServers(); len(servers) > 0 {
 			serversArg = fmt.Sprintf(" -servers %s", core.MapToString(servers, false, ":", "|"))
 		}
