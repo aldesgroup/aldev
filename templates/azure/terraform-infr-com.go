@@ -11,12 +11,13 @@ variable "config" {
     env                  = string # The current env: dev, qua, or prd, for instance
     location             = string # ex: northeurope
     identity_sub_name    = string # The name of the subscription hosting identity-related resources
-    management_sub_name  = string # The name of the subscription hosting resources related to tools & supervision
     environment_sub_name = string # The name of the subscription hosting all the resources needed for this particular environment
+    acr_sub_name         = string # The name of the subscription hosting the container registry
     acr_name             = string # The name of the container registry we use
     acr_rg               = string # The resource group the container registry belongs to
     domain_name          = string # The full domain name, something like: companyname.com
     port                 = number # The port the API will listen to
+    apim_sub_name        = string # The name of the subscription hosting the APIM instance
     apim_name            = string # The name of the APIM instance protecting this API
     apim_rg              = string # The resource group the APIM instance belongs to
   })
@@ -34,6 +35,14 @@ locals {
 # --- Providers, associated with subscriptions
 # --------------------------------------------------------------------------- #
 
+terraform {
+  required_providers {
+    azapi = {
+      source = "Azure/azapi"
+    }
+  }
+}
+
 provider "azurerm" {
   features {}
   alias = "global"
@@ -48,14 +57,19 @@ locals {
     for s in data.azurerm_subscriptions.all.subscriptions
     : s if s.display_name == var.config.identity_sub_name
   ])
-  management_subscription = one([
-    for s in data.azurerm_subscriptions.all.subscriptions
-    : s if s.display_name == var.config.management_sub_name
-  ])
   environment_subscription = one([
     for s in data.azurerm_subscriptions.all.subscriptions
     : s if s.display_name == var.config.environment_sub_name
   ])
+  acr_subscription = one([
+    for s in data.azurerm_subscriptions.all.subscriptions
+    : s if s.display_name == var.config.acr_sub_name
+  ])
+  apim_subscription = one([
+    for s in data.azurerm_subscriptions.all.subscriptions
+    : s if s.display_name == var.config.apim_sub_name
+  ])
+
 }
 
 provider "azurerm" {
@@ -66,14 +80,20 @@ provider "azurerm" {
 
 provider "azurerm" {
   features {}
-  alias           = "management_sub"
-  subscription_id = local.management_subscription.subscription_id
+  alias           = "environment_sub"
+  subscription_id = local.environment_subscription.subscription_id
 }
 
 provider "azurerm" {
   features {}
-  alias           = "environment_sub"
-  subscription_id = local.environment_subscription.subscription_id
+  alias           = "acr_sub"
+  subscription_id = local.acr_subscription.subscription_id
+}
+
+provider "azurerm" {
+  features {}
+  alias           = "apim_sub"
+  subscription_id = local.apim_subscription.subscription_id
 }
 
 # --------------------------------------------------------------------------- #
@@ -125,16 +145,14 @@ resource "azurerm_user_assigned_identity" "uai" {
 
 # 5) ACR
 data "azurerm_container_registry" "acr" {
-  provider            = azurerm.management_sub
+  provider            = azurerm.acr_sub
   name                = var.config.acr_name
   resource_group_name = var.config.acr_rg
 }
 
-# 6) APIM (data-only — used to read outbound IPs for ACA ingress restriction)
-data "azurerm_api_management" "apim" {
-  provider            = azurerm.management_sub
-  name                = var.config.apim_name
-  resource_group_name = var.config.apim_rg
+# 6) App Registration for ACA Easy Auth (created in 0-glo, read here)
+data "azuread_application" "app_pdt_buenrating" {
+  display_name = "app-{resource_ns}-{{.AppNameLower}}"
 }
 
 # 7) AcrPull role for our UAI on ACR
@@ -279,16 +297,6 @@ resource "azurerm_container_app" "aca" {
     external_enabled = true
     target_port      = var.config.port
 
-    # Allow only APIM outbound IPs; everything else is implicitly denied by Azure.
-    dynamic "ip_security_restriction" {
-      for_each = data.azurerm_api_management.apim.public_ip_addresses
-      content {
-        name             = "allow-apim-${ip_security_restriction.key}"
-        action           = "Allow"
-        ip_address_range = "${ip_security_restriction.value}/32"
-      }
-    }
-
     traffic_weight {
       label           = "stable"
       percentage      = 100
@@ -306,32 +314,40 @@ resource "azurerm_container_app" "aca" {
   tags = { environment = var.config.env, application = "{{.AppName}}" }
 }
 
-# 12) Binding of the subdomain to the ACA app (via azapi PATCH), using the CAE cert defined here
-# resource "azapi_update_resource" "aca_subdomain" {
-#   type        = "Microsoft.App/containerApps@2023-05-01"
-#   resource_id = azurerm_container_app.aca.id
+# 12) ACA Easy Auth — reject any request that does not carry a valid Entra ID token.
+#     APIM attaches one via its system-assigned managed identity (see b-apim policy).
+resource "azapi_resource" "aca_easy_auth" {
+  type      = "Microsoft.App/containerApps/authConfigs@2024-03-01"
+  name      = "current"
+  parent_id = azurerm_container_app.aca.id
 
-#   body = {
-#     properties = {
-#       configuration = {
-#         ingress = {
-#           customDomains = [
-#             {
-#               name          = local.subdomain_name
-#               bindingType   = "SniEnabled"
-#               certificateId = azurerm_container_app_environment_certificate.cert.id
-#             }
-#           ]
-#         }
-#       }
-#     }
-#   }
+  body = {
+    properties = {
+      platform = {
+        enabled = true
+      }
+      globalValidation = {
+        unauthenticatedClientAction = "Return401"
+      }
+      identityProviders = {
+        azureActiveDirectory = {
+          enabled = true
+          registration = {
+            clientId     = data.azuread_application.app_pdt_buenrating.client_id
+            openIdIssuer = "https://sts.windows.net/${data.azurerm_client_config.me.tenant_id}/v2.0"
+          }
+          validation = {
+            allowedAudiences = [
+              "api://${var.config.domain_name}/app-{resource_ns}-{{.AppNameLower}}"
+            ]
+          }
+        }
+      }
+    }
+  }
 
-#   depends_on = [
-#     azurerm_container_app.aca,
-#     azurerm_container_app_environment_certificate.cert
-#   ]
-# }
+  depends_on = [azurerm_container_app.aca]
+}
 
 # ----------------------- Useful outputs  -----------------------------------
 

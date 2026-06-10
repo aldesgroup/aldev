@@ -27,10 +27,10 @@ locals {
     location = "{location}"
     # The name of the subscription hosting identity-related resources
     identity_sub_name = "{identity_sub_name}"
-    # The name of the subscription hosting resources related to tools & supervision
-    management_sub_name = "{management_sub_name}"
     # The name of the subscription hosting all the resources needed for this particular environment
     environment_sub_name = "{environment_sub_name}"
+    # The name of the subscription hosting the container registry
+    acr_sub_name = "{acr_sub_name}"
     # The name of the container registry we use
     acr_name = "{acr_name}"
     # The resource group the container registry belongs to
@@ -39,6 +39,8 @@ locals {
     domain_name = "{domain_name}"
     # The port the API will listen to
     port = "{port}"
+    # The name of the subscription hosting the APIM instance
+    apim_sub_name = "{apim_sub_name}"
     # The APIM instance protecting this API
     apim_name = "{apim_name}"
     apim_rg   = "{apim_rg}"

@@ -42,7 +42,7 @@ func (thisGen *azureDeploymentGenerator) generateDeployConfig(remoteDir string) 
 	// the Gitlab CI/CD conf
 	if Config().Deploying.CICD != nil && Config().Deploying.CICD.Type == "gitlab" {
 		replacements := []string{
-			"management_sub_name", "identity_sub_name",
+			"identity_sub_name", "acr_sub_name",
 			"acr_name", "resource_ns",
 			"env-SANDBOX", "sub-SANDBOX",
 			"env-STAGING", "sub-STAGING",
@@ -116,7 +116,11 @@ func (thisGen *azureDeploymentGenerator) generateInfraDeployment(remoteDir strin
 		envParams["port"] = strconv.Itoa(getRemotePort(envName))
 
 		// creating / customizing the Terraform main file for the current env
-		replacements := []string{"location", "identity_sub_name", "management_sub_name", "environment_sub_name", "acr_name", "acr_rg", "domain_name", "port", "apim_name", "apim_rg"}
+		replacements := []string{
+			"location", "identity_sub_name", "environment_sub_name",
+			"acr_sub_name", "acr_name", "acr_rg",
+			"domain_name", "port",
+			"apim_sub_name", "apim_name", "apim_rg"}
 		EnsureFileFromTemplate(path.Join(envDir, "main.tf"), replaceIn(envName, envParams, azure.TerraformAzureINFRAxENV, replacements...), envName)
 
 		// keeping track of the environment we've just dealt with
@@ -151,7 +155,7 @@ func (thisGen *azureDeploymentGenerator) generateAPIMDeployment(remoteDir string
 		EnsureFileFromTemplate(path.Join(envDir, "backend.tf"), replaceIn(envName, envParams, azure.TerraformAzureBACKEND, "resource_ns"), envName+".apim")
 
 		// creating / customizing the Terraform main file for the current env
-		replacements := []string{"management_sub_name", "environment_sub_name", "apim_name", "apim_rg"}
+		replacements := []string{"environment_sub_name", "apim_sub_name", "apim_name", "apim_rg", "domain_name"}
 		EnsureFileFromTemplate(path.Join(envDir, "main.tf"), replaceIn(envName, envParams, azure.TerraformAzureAPIMxENV, replacements...), envName)
 	}
 }

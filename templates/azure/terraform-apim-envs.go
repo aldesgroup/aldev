@@ -9,14 +9,16 @@ locals {
   config = {
     # The current env: dev, qua, or prd, for instance
     env = "%[1]s"
-    # The name of the subscription hosting resources related to tools & supervision
-    management_sub_name = "{management_sub_name}"
     # The name of the subscription hosting all the resources needed for this particular environment
     environment_sub_name = "{environment_sub_name}"
+    # The name of the subscription hosting the APIM instance
+    apim_sub_name = "{apim_sub_name}"
     # The name of the API manager we use
     apim_name = "{apim_name}"
     # The resource group the API manager belongs to
     apim_rg = "{apim_rg}"
+    # The full domain name
+    domain_name = "{domain_name}"
   }
 }
 

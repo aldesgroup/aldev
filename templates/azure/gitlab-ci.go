@@ -32,8 +32,8 @@ default:
 # --- Defining reusable instructions
 # --------------------------------------------------------------------------- #
 
-.azure_set_mgmt_sub: &azure_set_mgmt_sub
-    - az account set --subscription {management_sub_name}
+.azure_set_acr_sub: &azure_set_acr_sub
+    - az account set --subscription {acr_sub_name}
 
 .acr_podman_login: &acr_podman_login
     - ACR_TOKEN=$(az acr login --name {acr_name} --expose-token --query accessToken -o tsv)
@@ -70,7 +70,7 @@ build_{env-SANDBOX}:
     stage: build
     tags: [{resource_ns}, {env-SANDBOX}]
     script:
-        - *azure_set_mgmt_sub
+        - *azure_set_acr_sub
         - *acr_podman_login
         - *git_token_setup
         - sed -i "s/_\$_VERSION_\$_/${CI_COMMIT_SHORT_SHA}/g" api/conf-{env-SANDBOX}.yaml
@@ -103,7 +103,7 @@ apim_{env-SANDBOX}:
     variables:
         TF_DIR: {{.Deploying.Dir}}/remote/b-apim/1-{env-SANDBOX}
     script:
-        - *azure_set_mgmt_sub
+        - *azure_set_acr_sub
         - *apim_tf_apply
     environment:
         name: {env-SANDBOX}
@@ -117,7 +117,7 @@ build_{env-STAGING}_n_{env-PRODUCTION}:
     stage: build
     tags: [{resource_ns}, {env-STAGING}]
     script:
-        - *azure_set_mgmt_sub
+        - *azure_set_acr_sub
         - *acr_podman_login
         - *git_token_setup
         - sed -i "s/_\$_VERSION_\$_/$VERSION/g" api/conf-{env-STAGING}.yaml
@@ -154,7 +154,7 @@ apim_{env-STAGING}:
     variables:
         TF_DIR: {{.Deploying.Dir}}/remote/b-apim/2-{env-STAGING}
     script:
-        - *azure_set_mgmt_sub
+        - *azure_set_acr_sub
         - *apim_tf_apply
     environment:
         name: {env-STAGING}
@@ -162,7 +162,7 @@ apim_{env-STAGING}:
 
 deploy_{env-PRODUCTION}:
     stage: deploy_prod
-    tags: [{resource_ns}, {env-STAGING}]
+    tags: [{resource_ns}, {env-PRODUCTION}]
     needs: [deploy_{env-STAGING}]
     script:
         - |
@@ -186,7 +186,7 @@ apim_{env-PRODUCTION}:
     variables:
         TF_DIR: {{.Deploying.Dir}}/remote/b-apim/3-{env-PRODUCTION}
     script:
-        - *azure_set_mgmt_sub
+        - *azure_set_acr_sub
         - *apim_tf_apply
     environment:
         name: {env-PRODUCTION}
@@ -201,7 +201,7 @@ const GitlabAzureCIxCDxCONFWithRollbacks = `
 #   stage: deploy
 #   needs: [ deploy_qua ]
 #   script:
-#   - *azure_set_mgmt_sub
+#   - *azure_set_acr_sub
 #   - az acr import \ --name "crpdt" \ --source "crpdt.azurecr.io/${IMAGE_REPO}:${CI_COMMIT_TAG}" \ --image "${IMAGE_REPO}:qua-lkg" \ --force
 #   rules:
 #   - if: '$CI_COMMIT_TAG'
@@ -236,7 +236,7 @@ const GitlabAzureCIxCDxCONFWithRollbacks = `
 #   stage: deploy
 #   needs: [ deploy_prd ]
 #   script:
-#   - *azure_set_mgmt_sub
+#   - *azure_set_acr_sub
 #   - az acr import \ --name "crpdt" \ --source "crpdt.azurecr.io/${IMAGE_REPO}:${CI_COMMIT_TAG}" \ --image "${IMAGE_REPO}:prd-lkg" \ --force
 #   rules:
 #   - if: '$CI_COMMIT_TAG'
