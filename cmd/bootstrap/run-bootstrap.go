@@ -163,10 +163,6 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 	// newProjCtx := ctx.WithExecDir(projectName)
 	// utils.Run("initializing Git", newProjCtx, false, "git init")
 	utils.EnsureFileFromTemplateAndContext(nil, path.Join(cachedProjDir, ".gitignore"), templates.GitIgnore)
-	// utils.Run("adding the files", newProjCtx, false, "git add .")
-	// utils.Run("committing the files", newProjCtx, false, "git commit -m \"dev: new aldev project\"") // TODO this fails for now
-	// utils.Run("pushing the first commit", newProjCtx, false,
-	// 	"git push --set-upstream git@git-ext.aldes.com:prodigtools/web/%s.git main", projectName)
 
 	// trimming the clone as much as necessary, before moving it
 	if noAPI {
