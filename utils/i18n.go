@@ -39,7 +39,7 @@ func downloadAllTranslationsFromGoogle(ctx CancelableContext) {
 
 	// if there's an API - which maybe serves the translation for a web app, we need translations for it
 	if IsDevAPI() && Config().API != nil {
-		downloadTranslationsForApp(Config().API.DataDir, "in the API", Config().API.I18n, false)
+		downloadTranslationsForApp(Config().API.Build.DataDir, "in the API", Config().API.I18n, false)
 	}
 
 	// if there's a native app, we need translations for it - and the app should contain them all from the get-go

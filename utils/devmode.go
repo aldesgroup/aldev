@@ -13,7 +13,7 @@ func IsDevWebApp() bool {
 }
 
 func IsDevAPI() bool {
-	return Config().API != nil && Config().API.SrcDir != ""
+	return Config().API != nil && Config().API.Build != nil && Config().API.Build.SrcDir != ""
 }
 
 func IsDevLibrary() bool {

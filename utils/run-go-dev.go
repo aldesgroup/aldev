@@ -139,16 +139,17 @@ func devUp(noServe bool) {
 		// locally deploying the API with 3 instances
 		if Config().Deploying != nil && Config().Deploying.Dir != "" {
 			QuickRun("Starting the API", "podman-compose -f %s/local/compose.yaml up --scale %s_api=%d",
-				Config().Deploying.Dir, Config().AppNameShort, Config().API.LocalInstances)
+				Config().Deploying.Dir, Config().AppNameShort, Config().API.LocalDev.Instances)
 		}
 	}
 }
 
 func devDown() {
-	// // Nuking everything launched with Podman... That may be a little bit too much
-	// // We'll prolly have to smooth that out sometimes later
+	// Nuking everything launched with Podman... That may be a little bit too much
+	// We'll prolly have to smooth that out sometimes later
 	if IsDevAPI() {
-		QuickRun("Stopping the API", "podman rm --force --filter name=local_%s_", Config().AppNameShort)
+		QuickRun("Stopping the load balancer first", "podman rm --force --filter name=local_%s_api_lb", Config().AppNameShort)
+		QuickRun("Stopping the API instances", "podman rm --force --filter name=local_%s_api", Config().AppNameShort)
 	}
 
 	// // Also, making sure Podman's internal network is removed to be able to start from fresh later on
@@ -157,6 +158,7 @@ func devDown() {
 
 func ensureLocalEnvReady() {
 	if IsDevAPI() {
+		// create the missing network if it doesn't exist yet
 		localEnvCtx := NewBaseContext().WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout).WithAllowFailure(true)
 		if !Run("Checking the 'shared-net' network existence", localEnvCtx, false, "%s", "podman network exists shared-net") {
 			Run("Creating the 'shared-net' network", localEnvCtx, false, "%s", "podman network create shared-net")

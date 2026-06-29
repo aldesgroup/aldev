@@ -141,10 +141,10 @@ func aldevBootstrapRun(command *cobra.Command, args []string) {
 
 	// --- in the API
 	goModuleName := projectNameKebab
-	templateModuleContent := core.ReadFile(path.Join(cachedProjDir, conf.API.SrcDir, "go.mod"), true)
+	templateModuleContent := core.ReadFile(path.Join(cachedProjDir, conf.API.Build.SrcDir, "go.mod"), true)
 	templateModuleName := core.After(core.Before(string(templateModuleContent), "\n"), "module ")
-	core.ReplaceInFile(path.Join(cachedProjDir, conf.API.SrcDir, "go.mod"), map[string]string{templateModuleName: goModuleName})
-	core.ReplaceInFolder(path.Join(cachedProjDir, conf.API.SrcDir), ".go", map[string]string{templateModuleName: goModuleName})
+	core.ReplaceInFile(path.Join(cachedProjDir, conf.API.Build.SrcDir, "go.mod"), map[string]string{templateModuleName: goModuleName})
+	core.ReplaceInFolder(path.Join(cachedProjDir, conf.API.Build.SrcDir), ".go", map[string]string{templateModuleName: goModuleName})
 
 	// core.ReplaceInFile(path.Join(cachedProjDir, ".aldev.yaml"), map[string]string{"apionly: false": "apionly: true"})
 	// core.ReplaceInFile(path.Join(cachedProjDir, "api", "go.mod"), map[string]string{"/libs/devotion--template": "/web/" + projectNamePascal})

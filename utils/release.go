@@ -3,7 +3,6 @@ package utils
 import (
 	"bufio"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
@@ -42,13 +41,13 @@ func runGitCheckCmd(whyRunThis string, commandAsString string) string {
 func MakeRelease(ctx CancelableContext, release ReleaseType) {
 	// can't do this from any other branch than the main branch
 	if currentBranch := runGitCheckCmd("Getting the current Git branch", "git branch --show-current"); currentBranch != "main" {
-		slog.Error(fmt.Sprintf("Can only make a release from the 'main' branch (not this '%s' branch)", currentBranch))
+		Error("Can only make a release from the 'main' branch (not this '%s' branch)", currentBranch)
 		return
 	}
 
 	// checking there are no uncommited changes
 	if uncommitedChanges := runGitCheckCmd("Checking for uncommited changes", "git status --porcelain"); uncommitedChanges != "" {
-		slog.Error("There are uncommited changes, please commit or stash them before making a release")
+		Error("There are uncommited changes, please commit or stash them before making a release")
 		return
 	}
 
@@ -59,26 +58,26 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 
 	// checking there are no unpushed commits
 	if unpushedCommits := runGitCheckCmd("Checking for unpushed commits", "git log origin/main..HEAD --oneline"); unpushedCommits != "" {
-		slog.Error("There are unpushed commits, please push them before making a release")
+		Error("There are unpushed commits, please push them before making a release")
 		return
 	}
 
 	// checking there are no unpushed tags
 	if unpushedTags := runGitCheckCmd("Checking for unpushed tags", "git push origin --tags --dry-run"); unpushedTags != "" {
-		slog.Error("There are unpushed tags, please push them before making a release")
+		Error("There are unpushed tags, please push them before making a release")
 		return
 	}
 
 	// checking there are no unpulled commits
 	if unpulledCommits := runGitCheckCmd("Checking for unpulled commits", "git log HEAD..origin/main --oneline"); unpulledCommits != "" {
-		slog.Error("There are unpulled commits, please pull them before making a release")
+		Error("There are unpulled commits, please pull them before making a release")
 		return
 	}
 
 	// checking origin/releases hasn't diverged
 	if divergedCommits := runGitCheckCmd("Checking 'main' and 'releases' haven't diverged", "git log origin/main..origin/releases --oneline"); divergedCommits != "" {
-		slog.Error("There are commits in the 'releases' branch that are not in the 'main' branch: \n\n" + divergedCommits + "\n\n" +
-			"Please update the 'main' branch with these commits before making a release")
+		Error("There are commits in the 'releases' branch that are not in the 'main' branch: \n\n%s\n\n"+
+			"Please update the 'main' branch with these commits before making a release", divergedCommits)
 		return
 	}
 
@@ -101,7 +100,7 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 
 	// a bit of a sanity check to make sure the VERSION file is in sync with the git tags
 	if currentVersionFromFile != "" && currentVersionFromFile != currentVersionFromGit {
-		slog.Error(fmt.Sprintf("VERSION file (%s) is not in sync with git tags (%s), this should never happen!", currentVersionFromFile, currentVersionFromGit))
+		Error("VERSION file (%s) is not in sync with git tags (%s), this should never happen!", currentVersionFromFile, currentVersionFromGit)
 		return
 	}
 
@@ -123,14 +122,14 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 	core.WriteStringToFile(versionFilePath, "%s", nextVersion)
 
 	// updating the API doc
-	if Config().API != nil && Config().API.DocPath != "" {
-		core.ReplaceInFile(Config().API.DocPath, map[string]string{"v0.0.1": nextVersion})
-		core.ReplaceInFile(Config().API.DocReport, map[string]string{"v0.0.1": nextVersion})
+	if Config().API != nil && Config().API.Doc.Path != "" {
+		core.ReplaceInFile(Config().API.Doc.Path, map[string]string{"v0.0.1": nextVersion})
+		core.ReplaceInFile(Config().API.Doc.Report, map[string]string{"v0.0.1": nextVersion})
 	}
 
 	// git-adding the VERSION file
-	if Config().API != nil && Config().API.DocPath != "" {
-		if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.DocPath, Config().API.DocReport); !addOK {
+	if Config().API != nil && Config().API.Doc.Path != "" {
+		if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.Doc.Path, Config().API.Doc.Report); !addOK {
 			core.PanicMsg("Could not add the updated VERSION file + API docs to Git")
 		}
 	} else if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s", versionFilePath); !addOK {

@@ -6,7 +6,6 @@
 package utils
 
 import (
-	"fmt"
 	"path"
 	"strconv"
 	"strings"
@@ -71,11 +70,11 @@ func GenerateDeployFiles(ctx CancelableContext) {
 
 	// we at least need to generate the local API config file
 	ensureLocalEnvType()
-	generateAPIConfFile("local", Config().API.Runtimes.Local, regen)
+	resolvedLocalAPIConfig := generateAPIConfFile("local", Config().API.Runtimes.Local, regen, true)
 
 	// if we've configured remote environments, then we'll need config files for them
 	for envName, envConf := range Config().API.Runtimes.Remote {
-		generateAPIConfFile(envName, envConf, regen)
+		generateAPIConfFile(envName, envConf, regen, false)
 	}
 
 	// --------------------------------------------------------------------
@@ -140,13 +139,13 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		// what we need for local deployment
 		localDir := core.EnsureDir(Config().Deploying.Dir, "local")
 		EnsureFileFromTemplate(path.Join(localDir, "nginx.conf"), templates.LocalNGINX)
-		EnsureFileFromTemplate(path.Join(localDir, "compose.yaml"), templates.LocalCOMPOSE)
+		generateLocalComposeFile(localDir, resolvedLocalAPIConfig)
 
 		// now the base for remote deployment, i.e. the container file
 		containerFilePath := path.Join(Config().Deploying.Dir, "Containerfile")
-		moduleContent := core.ReadFile(path.Join(Config().API.SrcDir, "go.mod"), true) // reads all the go.mod file
-		moduleGoVersion := core.Before(core.After(string(moduleContent), "go "), "\n") // keeps only the go version, i.e. 1.24.3
-		moduleGoVersion = moduleGoVersion[:strings.LastIndex(moduleGoVersion, ".")]    // keeps only the major & middle numbers, i.e. 1.24
+		moduleContent := core.ReadFile(path.Join(Config().API.Build.SrcDir, "go.mod"), true) // reads all the go.mod file
+		moduleGoVersion := core.Before(core.After(string(moduleContent), "go "), "\n")       // keeps only the go version, i.e. 1.24.3
+		moduleGoVersion = moduleGoVersion[:strings.LastIndex(moduleGoVersion, ".")]          // keeps only the major & middle numbers, i.e. 1.24
 		EnsureFileFromTemplate(containerFilePath, templates.ContainerFILE, moduleGoVersion, Config().PrivateGit)
 
 		if verbose {
@@ -177,44 +176,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 }
 
 // ----------------------------------------------------------------------------
-// Generating API config files
-// ----------------------------------------------------------------------------
-
-func generateAPIConfFile(envName string, envConfig *APIRuntimeConfig, regen bool) {
-	// checking the existing config file
-	confFileName := fmt.Sprintf("%s/conf-%s.yaml", Config().API.SrcDir, envName)
-	if core.FileExists(confFileName) && !regen {
-		Debug("%s already exists!", confFileName)
-		return
-	}
-
-	// building the base config for the current environment
-	base := mergeYAMLNodes(&Config().API.Runtimes.Common.Base, &envConfig.Base)
-	base = prependValue("version", "_$_VERSION_$_", base)
-	base = prependValue("port", getEnvPortString(envConfig), base)
-	base = prependValue("appdesc", Config().AppDesc, base)
-	base = prependValue("appname", Config().AppName, base)
-
-	// making a new config by merging the env config on top of the common config
-	newConf := &struct {
-		Base   yaml.Node
-		Custom yaml.Node
-	}{
-		Base:   *base,
-		Custom: *mergeYAMLNodes(&Config().API.Runtimes.Common.Custom, &envConfig.Custom),
-	}
-
-	// marshalling
-	newConfBytes, errMarsh := yaml.Marshal(newConf)
-	core.PanicMsgIfErr(errMarsh, "Could not marshal merged config for env '%s'", envName)
-
-	// writing out the file
-	core.WriteBytesToFile(confFileName, newConfBytes)
-	Debug("Just wrote file : %s", confFileName)
-}
-
-// ----------------------------------------------------------------------------
-// Utils
+// Utils - config items and YAML nodes
 // ----------------------------------------------------------------------------
 
 // returns the env type (as a string) from the given environment with the given name

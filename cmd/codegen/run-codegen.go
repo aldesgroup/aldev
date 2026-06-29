@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path"
@@ -81,8 +80,8 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	)
 
 	if utils.Config().API != nil {
-		mainRunCmd = fmt.Sprintf("%s -docpath %s", mainRunCmd, utils.Config().API.DocPath)
-		mainRunCmd = fmt.Sprintf("%s -othersrcdirs %s", mainRunCmd, strings.Join(utils.Config().API.WatchAlso, ","))
+		mainRunCmd = fmt.Sprintf("%s -docpath %s", mainRunCmd, utils.Config().API.Doc.Path)
+		mainRunCmd = fmt.Sprintf("%s -othersrcdirs %s", mainRunCmd, strings.Join(utils.Config().API.LocalDev.WatchAlso, ","))
 	}
 	if utils.Config().Web != nil {
 		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
@@ -145,9 +144,9 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	must(utils.Run("Formatting the code", codegenCtx, true, "gofumpt -w %s %s", path.Join(utils.GetGoSrcDir(), "_include"), path.Join(utils.GetGoSrcDir(), "main")))
 
 	// migrating the DBs if needed
-	if !utils.IsDevLibrary() {
-		must(utils.Run("DB automigration", codegenCtx, true, "%s", mainRunCmd+" -migrate"))
-	}
+	// if !utils.IsDevLibrary() {
+	// 	must(utils.Run("DB automigration", codegenCtx, true, "%s", mainRunCmd+" -migrate"))
+	// }
 
 	// under Windows, the executable for codegen and API serving is not the same - we need to build the executable for the containers
 	if core.IsWindows() && !noContainer && codeHasChanged() {
@@ -207,9 +206,9 @@ func codeLint() {
 func apiDocLint() {
 	// there's no API doc to lint if there's no API
 	if utils.Config().API != nil {
-		docPath := withDefault(utils.Config().API.DocPath, "data/api-doc.yaml")
-		docReport := withDefault(utils.Config().API.DocReport, "tmp/api-doc-report.yaml")
-		browser := withDefault(utils.Config().API.Browser, "chromium")
+		docPath := withDefault(utils.Config().API.Doc.Path, "data/api-doc.yaml")
+		docReport := withDefault(utils.Config().API.Doc.Report, "tmp/api-doc-report.yaml")
+		browser := withDefault(utils.Config().API.Doc.OpenIn, "chromium")
 
 		// we can't generate the report if the API doc does not exist
 		if core.FileExists(docPath) {
@@ -225,7 +224,7 @@ func apiDocLint() {
 				cmd.Stderr = os.Stderr
 				core.PanicIfErr(cmd.Run())
 
-				slog.Info("API doc report generated: " + docReport)
+				utils.Info("API doc report generated: '%s'", docReport)
 
 				// Opening it automatically
 				core.PanicIfErr(exec.Command(browser, docReport).Start())
