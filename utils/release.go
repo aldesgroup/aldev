@@ -130,7 +130,7 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 	// git-adding the VERSION file
 	if Config().API != nil && Config().API.Doc.Path != "" {
 		// if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.Doc.Path, Config().API.Doc.Report); !addOK {
-		if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.Doc.Path); !addOK {
+		if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s", versionFilePath, Config().API.Doc.Path); !addOK {
 			core.PanicMsg("Could not add the updated VERSION file + API docs to Git")
 		}
 	} else if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s", versionFilePath); !addOK {
