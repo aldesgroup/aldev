@@ -124,12 +124,13 @@ func MakeRelease(ctx CancelableContext, release ReleaseType) {
 	// updating the API doc
 	if Config().API != nil && Config().API.Doc.Path != "" {
 		core.ReplaceInFile(Config().API.Doc.Path, map[string]string{"v0.0.1": nextVersion})
-		core.ReplaceInFile(Config().API.Doc.Report, map[string]string{"v0.0.1": nextVersion})
+		// core.ReplaceInFile(Config().API.Doc.Report, map[string]string{"v0.0.1": nextVersion})
 	}
 
 	// git-adding the VERSION file
 	if Config().API != nil && Config().API.Doc.Path != "" {
-		if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.Doc.Path, Config().API.Doc.Report); !addOK {
+		// if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.Doc.Path, Config().API.Doc.Report); !addOK {
+		if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s %s %s", versionFilePath, Config().API.Doc.Path); !addOK {
 			core.PanicMsg("Could not add the updated VERSION file + API docs to Git")
 		}
 	} else if addOK := QuickRun("Adding the updated VERSION file to Git + API docs", "git add %s", versionFilePath); !addOK {

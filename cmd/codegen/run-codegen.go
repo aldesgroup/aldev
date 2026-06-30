@@ -2,8 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"time"
@@ -207,28 +205,32 @@ func apiDocLint() {
 	// there's no API doc to lint if there's no API
 	if utils.Config().API != nil {
 		docPath := withDefault(utils.Config().API.Doc.Path, "data/api-doc.yaml")
-		docReport := withDefault(utils.Config().API.Doc.Report, "tmp/api-doc-report.yaml")
-		browser := withDefault(utils.Config().API.Doc.OpenIn, "chromium")
+		// docReport := withDefault(utils.Config().API.Doc.Report, "tmp/api-doc-report.yaml")
+		// browser := withDefault(utils.Config().API.Doc.OpenIn, "chromium")
 
 		// we can't generate the report if the API doc does not exist
 		if core.FileExists(docPath) {
 			// we need to generate it if it does not exist yet, or is older than the API doc
-			if !core.FileExists(docReport) || core.EnsureModTime(docReport).Before(core.EnsureModTime(docPath)) {
+			// if !core.FileExists(docReport) || core.EnsureModTime(docReport).Before(core.EnsureModTime(docPath)) {
 
-				// making sure the folder path for the report exists
-				core.EnsureDir(path.Dir(docReport))
+			// 	// making sure the folder path for the report exists
+			// 	core.EnsureDir(path.Dir(docReport))
 
-				// Generating the report
-				cmd := exec.Command("vacuum", "html-report", docPath, docReport)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				core.PanicIfErr(cmd.Run())
+			// 	// Generating the report
+			// 	cmd := exec.Command("vacuum", "html-report", docPath, docReport)
+			// 	cmd.Stdout = os.Stdout
+			// 	cmd.Stderr = os.Stderr
+			// 	core.PanicIfErr(cmd.Run())
 
-				utils.Info("API doc report generated: '%s'", docReport)
+			// 	utils.Info("API doc report generated: '%s'", docReport)
 
-				// Opening it automatically
-				core.PanicIfErr(exec.Command(browser, docReport).Start())
-			}
+			// 	// Opening it automatically
+			// 	core.PanicIfErr(exec.Command(browser, docReport).Start())
+			// }
+
+			utils.QuickRun("Checking the API doc quality", "vacuum lint --ignore-polymorph-circle-ref --ignore-array-circle-ref %s", docPath)
+			utils.Info("To know more about the errors and warnings here: \n\n"+
+				"vacuum dashboard --ignore-polymorph-circle-ref --ignore-array-circle-ref %s\n\n", docPath)
 		}
 	}
 }
