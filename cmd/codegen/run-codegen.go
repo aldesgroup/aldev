@@ -228,7 +228,13 @@ func apiDocLint() {
 			// 	core.PanicIfErr(exec.Command(browser, docReport).Start())
 			// }
 
-			utils.QuickRun("Checking the API doc quality", "vacuum lint --ignore-polymorph-circle-ref --ignore-array-circle-ref %s", docPath)
+			// only doing this automatically if the doc has been (re)generated recently
+			if utils.IsRegen() || core.EnsureModTime(docPath).After(time.Now().Add(-5*time.Second)) {
+				utils.QuickRun("Checking the API doc quality", "vacuum lint --ignore-polymorph-circle-ref --ignore-array-circle-ref %s", docPath)
+			} else {
+				utils.Info("To check the quality of the API doc: \n\n"+
+					"vacuum lint --ignore-polymorph-circle-ref --ignore-array-circle-ref %s\n\n", docPath)
+			}
 			utils.Info("To know more about the errors and warnings here: \n\n"+
 				"vacuum dashboard --ignore-polymorph-circle-ref --ignore-array-circle-ref %s\n\n", docPath)
 		}
