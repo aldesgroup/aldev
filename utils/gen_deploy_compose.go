@@ -91,7 +91,7 @@ func getApiRunPart(_ map[string]map[string]interface{}) string {
 	return `
                 echo "Waiting for migration to complete successfully..."
                 retries=0
-                max_retries=20
+                max_retries=10
                 until [ -f tmp/.db_init_done ]; do
                     printf 'retry=%s\n' "$$retries"
                     if [ "$$retries" -ge "$$max_retries" ]; then
