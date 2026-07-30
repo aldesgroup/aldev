@@ -6,6 +6,7 @@ package utils
 import (
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	core "github.com/aldesgroup/corego"
@@ -17,6 +18,11 @@ type exclusionType int
 
 const exclusionTypeEXCLUDExONE = 1
 const exclusionTypeEXCLUDExALL = 2
+
+// codegen'd files ending with this suffix live right next to their source BO file (no dedicated,
+// watch-excluded folder like "_include"), so we need to filter them out by name instead, otherwise
+// we'd trigger an infinite rebuild loop
+const excludedFILExSUFFIX = "--xtd.go"
 
 var excludedPaths map[string]exclusionType
 
@@ -30,7 +36,6 @@ func RunGoSrcDev(ctx CancelableContext, noServe bool) {
 	excludedPaths = map[string]exclusionType{
 		GetGoSrcDir(): exclusionTypeEXCLUDExONE, // not including the API folder itself, because of the conf file and go.sum
 		"_include":    exclusionTypeEXCLUDExALL, // obviously not trigering codegen / rebuild on codegen'd files, otherwise: infinite loop
-		"class":       exclusionTypeEXCLUDExALL, // obviously not trigering codegen / rebuild on other codegen'd files, otherwise: infinite loop
 		".git":        exclusionTypeEXCLUDExALL, // not looking into a .git folder
 		"bin":         exclusionTypeEXCLUDExALL, // also obviously not trigering on the binaries
 	}
@@ -69,7 +74,7 @@ func RunGoSrcDev(ctx CancelableContext, noServe bool) {
 		for {
 			select {
 			case event := <-watcher.Events:
-				if event.Op&fsnotify.Write == fsnotify.Write {
+				if event.Op&fsnotify.Write == fsnotify.Write && !strings.HasSuffix(event.Name, excludedFILExSUFFIX) {
 					if _, alreadyCaptured := cache.Get(event.String()); !alreadyCaptured {
 						// let's wait a bit first
 						time.Sleep(100 * time.Millisecond)

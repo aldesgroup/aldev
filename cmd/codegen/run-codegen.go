@@ -21,7 +21,7 @@ var aldevCodegenCmd = &cobra.Command{
 	Use:   "codegen",
 	Short: "Completes the app with additional generated code to speed up your dev",
 	Long: "This generates additional code to provide you with useful handles on DB lists" +
-		"business object classes & their properties, and more. And re-compiles the whole app.",
+		"business object models & their properties, and more. And re-compiles the whole app.",
 	Run: aldevCodegenRun,
 }
 
@@ -101,7 +101,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	}
 
 	// generation step n°1
-	must(utils.Run("Generating stuff: DB list, BOclasses, BO registry...", codegenCtx, true, "%s", mainRunCmd+" -codegen 1"+regenArg))
+	must(utils.Run("Generating stuff: DB list, BO sources, BO registries...", codegenCtx, true, "%s", mainRunCmd+" -codegen 1"+regenArg))
 
 	// compilation n°2
 	if codeHasChanged() {
@@ -168,7 +168,7 @@ func codeComplete() {
 	completeRecentCode(time.Now().Add(-5*time.Second), utils.GetGoSrcDir())
 }
 
-var skipCodeCompleteForDirs = []string{"_include", "class"}
+var skipCodeCompleteForDirs = []string{"_include"}
 
 // this function looks for recently generated code, completes it with missing tags, and format those tags
 func completeRecentCode(newerThan time.Time, dir string) {
@@ -183,7 +183,7 @@ func completeRecentCode(newerThan time.Time, dir string) {
 			if strings.HasSuffix(entry.Name(), "--.go") {
 				if filepath := path.Join(dir, entry.Name()); utils.IsRegen() || core.EnsureModTime(filepath).After(newerThan) {
 					utils.Info("Completing code for file: %s", filepath)
-					utils.QuickRun("Adding missing tags", "gomodifytags -file %s -all -add-tags json,io:in|i*|o*,desc: -transform camelcase -w --quiet -skip-unexported", filepath)
+					utils.QuickRun("Adding missing tags", "gomodifytags -file %s -all -add-tags json,io:in|i*|o*,desc: -transform camelcase -w --quiet -skip-unexported -add-options json=omitempty", filepath)
 					utils.QuickRun("Aligning the tags", "formattag -file %s", filepath)
 
 				}
