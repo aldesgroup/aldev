@@ -120,7 +120,7 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 	serversArg := ""
 	if utils.Config().API != nil && utils.Config().Deploying != nil && utils.Config().Deploying.Platform != nil {
 		if servers := utils.GetRemoteDeploymentGenerator().GetServers(); len(servers) > 0 {
-			serversArg = fmt.Sprintf(" -servers %s", core.MapToString(servers, false, ":", "|"))
+			serversArg = fmt.Sprintf(" -servers %s", core.MapToString(servers, true, ":", "|"))
 		}
 	}
 	must(utils.Run("Generating stuff: BO vmaps, BO web models, etc...", codegenCtx, true, "%s", mainRunCmd+" -codegen 3"+regenArg+serversArg))
