@@ -121,16 +121,29 @@ resource "azurerm_log_analytics_workspace" "log" {
 
 # 3) Container App Environment
 resource "azurerm_container_app_environment" "cae" {
-  provider                   = azurerm.environment_sub
-  name                       = "cae-{resource_ns}-${var.config.env}-{{.AppNameLower}}"
-  location                   = var.config.location
-  resource_group_name        = azurerm_resource_group.rg.name
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.log.id
-  tags                       = { environment = var.config.env, application = "{{.AppName}}" }
+  provider            = azurerm.environment_sub
+  name                = "cae-{resource_ns}-${var.config.env}-{{.AppNameLower}}"
+  location            = var.config.location
+  resource_group_name = azurerm_resource_group.rg.name
+  logs_destination    = "azure-monitor"
+  tags                = { environment = var.config.env, application = "{{.AppName}}" }
 
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.uai.id]
+  }
+}
+
+# 3.a) Diagnostic setting: routes environment logs to dedicated tables via
+# the Azure Monitor pipeline instead of the retiring Data Collector API.
+resource "azurerm_monitor_diagnostic_setting" "cae" {
+  provider                   = azurerm.environment_sub
+  name                       = "diag-{resource_ns}-${var.config.env}-{{.AppNameLower}}"
+  target_resource_id         = azurerm_container_app_environment.cae.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log.id
+
+  enabled_log {
+    category_group = "allLogs"
   }
 }
 
