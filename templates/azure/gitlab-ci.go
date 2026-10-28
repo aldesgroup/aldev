@@ -85,8 +85,8 @@ deploy_{env-SANDBOX}:
     needs: [build_{env-SANDBOX}]
     script:
         - |
-            az containerapp update                                                     \
-              --subscription   {sub-SANDBOX}                                            \
+            az containerapp update                                                  \
+              --subscription   {sub-SANDBOX}                                         \
               --name           aca-{resource_ns}-{env-SANDBOX}-{{.AppNameLower}}                                  \
               --resource-group rg-{resource_ns}-{env-SANDBOX}-{{.AppNameLower}}                                   \
               --container-name {{.AppNameKebab}}-api                                         \
@@ -108,7 +108,7 @@ apim_{env-SANDBOX}:
     environment:
         name: {env-SANDBOX}
     rules: *dev_pipeline_rules
-
+$$webdeploydev$$
 # --------------------------------------------------------------------------- #
 # --- Building & deploying on {env-STAGING} & {env-PRODUCTION}, with each new tag
 # --------------------------------------------------------------------------- #
@@ -136,8 +136,8 @@ deploy_{env-STAGING}:
     needs: [build_{env-STAGING}_n_{env-PRODUCTION}]
     script:
         - |
-            az containerapp update                                           \
-              --subscription   {sub-STAGING}                                  \
+            az containerapp update                                        \
+              --subscription   {sub-STAGING}                               \
               --name           aca-{resource_ns}-{env-STAGING}-{{.AppNameLower}}                        \
               --resource-group rg-{resource_ns}-{env-STAGING}-{{.AppNameLower}}                         \
               --container-name {{.AppNameKebab}}-api                               \
@@ -167,7 +167,7 @@ deploy_{env-PRODUCTION}:
     script:
         - |
             az containerapp update                                           \
-              --subscription   {sub-PRODUCTION}                                  \
+              --subscription   {sub-PRODUCTION}                               \
               --name           aca-{resource_ns}-{env-PRODUCTION}-{{.AppNameLower}}                        \
               --resource-group rg-{resource_ns}-{env-PRODUCTION}-{{.AppNameLower}}                         \
               --container-name {{.AppNameKebab}}-api                               \

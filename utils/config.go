@@ -73,8 +73,10 @@ type AldevConfig struct {
 		}
 	}
 	Web *struct { // must be filled if there's a web app
-		SrcDir  string      // where the Web app's GoaldR-based code should be found
-		Port    int         // the port used to expose the app's frontend
+		Build *struct {
+			SrcDir string // where the Web app's GoaldR-based code should be found
+			Port   int    // the port used to expose the app's frontend
+		}
 		EnvVars []*struct { // environment variables to pass to the web app
 			Name  string // the variable name; must start with "WEB_"
 			Desc  string // a description for the

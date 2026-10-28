@@ -133,7 +133,12 @@ resource "azurerm_api_management_api_policy" "api_policy" {
     <policies>
       <inbound>
         <base />
+        <!-- Overriding (never appending) so a client can't spoof this header; the app validates the token in it -->
+        <set-header name="X-User-Authorization" exists-action="override">
+          <value>@(context.Request.Headers.GetValueOrDefault("Authorization", ""))</value>
+        </set-header>
         <set-backend-service backend-id="${azurerm_api_management_backend.backend.name}" />
+        <!-- Replaces "Authorization" with APIM's own token, which ACA Easy Auth checks -->
         <authentication-managed-identity resource="api://${var.config.domain_name}/app-{resource_ns}-{{.AppNameLower}}" />
       </inbound>
       <backend><base /></backend>

@@ -77,14 +77,14 @@ func aldevCodegenRun(command *cobra.Command, args []string) {
 		path.Join(utils.GetGoSrcDir(), utils.GetBinDir()),
 	)
 
-	if utils.Config().API != nil {
+	if utils.IsDevAPI() {
 		mainRunCmd = fmt.Sprintf("%s -docpath %s", mainRunCmd, utils.Config().API.Doc.Path)
 		mainRunCmd = fmt.Sprintf("%s -othersrcdirs %s", mainRunCmd, strings.Join(utils.Config().API.LocalDev.WatchAlso, ","))
 	}
-	if utils.Config().Web != nil {
-		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.SrcDir)
+	if utils.IsDevWebApp() {
+		mainRunCmd = fmt.Sprintf("%s -webdir %s", mainRunCmd, utils.Config().Web.Build.SrcDir)
 	}
-	if utils.Config().Native != nil {
+	if utils.IsDevNative() {
 		mainRunCmd = fmt.Sprintf("%s -nativedir %s", mainRunCmd, utils.Config().Native.SrcDir)
 	}
 

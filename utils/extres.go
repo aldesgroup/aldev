@@ -10,7 +10,7 @@ import (
 )
 
 // Downloading external resources, like translations, vendors, etc
-func DownloadExternalResources(ctx CancelableContext, withTranslations bool) {
+func DownloadExternalResources(ctx CancelableContext, withTranslations bool, noGit bool) {
 	// making sure the cache folder exists if we need it
 	if len(Config().Vendors) > 0 {
 		core.EnsureDir(GetCacheDir())
@@ -25,7 +25,7 @@ func DownloadExternalResources(ctx CancelableContext, withTranslations bool) {
 	}
 
 	// proceed to download external resources - which only happens for JS/TS libs
-	if IsDevNative() || IsDevWebApp() {
+	if !noGit && (IsDevNative() || IsDevWebSrc()) {
 		wg.Go(func() { fetchVendoredLibraries(ctx) })
 	}
 

@@ -168,6 +168,13 @@ data "azuread_application" "app_pdt_buenrating" {
   display_name = "app-{resource_ns}-{{.AppNameLower}}"
 }
 
+# 6.b) The APIM instance, whose system-assigned identity is the only caller Easy Auth accepts
+data "azurerm_api_management" "apim" {
+  provider            = azurerm.apim_sub
+  name                = var.config.apim_name
+  resource_group_name = var.config.apim_rg
+}
+
 # 7) AcrPull role for our UAI on ACR
 resource "azurerm_role_assignment" "acr_pull" {
   provider             = azurerm.identity_sub
@@ -190,6 +197,7 @@ resource "azurerm_key_vault" "kv" {
   sku_name                   = "standard"
   soft_delete_retention_days = 7
   purge_protection_enabled   = true
+  rbac_authorization_enabled = false # We use access policies below
   tags                       = { environment = var.config.env, application = "{{.AppName}}" }
 }
 
@@ -327,8 +335,9 @@ resource "azurerm_container_app" "aca" {
   tags = { environment = var.config.env, application = "{{.AppName}}" }
 }
 
-# 12) ACA Easy Auth — reject any request that does not carry a valid Entra ID token.
-#     APIM attaches one via its system-assigned managed identity (see b-apim policy).
+# 12) ACA Easy Auth - service-to-service gate: only APIM's managed identity gets through.
+#     End users are authenticated by the app itself, from the token APIM forwards in the
+#     X-User-Authorization header (see the b-apim policy).
 resource "azapi_resource" "aca_easy_auth" {
   type      = "Microsoft.App/containerApps/authConfigs@2024-03-01"
   name      = "current"
@@ -353,6 +362,11 @@ resource "azapi_resource" "aca_easy_auth" {
             allowedAudiences = [
               "api://${var.config.domain_name}/app-{resource_ns}-{{.AppNameLower}}"
             ]
+            defaultAuthorizationPolicy = {
+              allowedPrincipals = {
+                identities = [data.azurerm_api_management.apim.identity[0].principal_id]
+              }
+            }
           }
         }
       }

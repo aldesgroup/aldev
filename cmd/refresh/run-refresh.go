@@ -45,7 +45,7 @@ func aldevRefreshRun(command *cobra.Command, args []string) {
 	// TODO add -deps to include go get -u -v ./main && git commit && git push
 
 	// downloading various external resource in parallel
-	utils.DownloadExternalResources(aldevCtx, withTranslations)
+	utils.DownloadExternalResources(aldevCtx, withTranslations, false)
 
 	// creates the required symlinks
 	// TODO remove if not used - but could probably be used for linting

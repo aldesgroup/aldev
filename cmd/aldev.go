@@ -51,6 +51,7 @@ var (
 	disableI18nDL  bool
 	regen          bool
 	noServe        bool
+	noGit          bool
 )
 
 func init() {
@@ -68,6 +69,7 @@ func init() {
 	aldevCmd.Flags().BoolVarP(&disableI18nDL, "disable-i18n-dl", "i", false,
 		"if true, then the translations are not refreshed, which they are by default")
 	aldevCmd.Flags().BoolVarP(&noServe, "no-serve", "n", false, "if true, then the server is not started")
+	aldevCmd.Flags().BoolVarP(&noGit, "no-git", "g", false, "if true, then git operations are skipped - which means no refreshing the vendors")
 }
 
 // ----------------------------------------------------------------------------
@@ -182,7 +184,7 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	utils.ReadConfig(cfgFileName)
 
 	// proceed to download the needed external resources
-	utils.DownloadExternalResources(ctx, !disableI18nDL)
+	utils.DownloadExternalResources(ctx, !disableI18nDL, noGit)
 
 	// Generating config files for deploying the app locally, CI / CD, etc.
 	if utils.IsDevAPI() && !disableConfgen {
@@ -191,6 +193,11 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 
 	if utils.IsDevNative() {
 		// nothing for now, but there will be something FOR SURE
+	}
+
+	if utils.IsDevWebSrc() {
+		// Running the Web app
+		utils.RunWebDev(ctx)
 	}
 
 	if utils.IsDevGoSrc() {

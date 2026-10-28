@@ -54,6 +54,23 @@ services:
         networks:
             # The load balancer should be on this network to
             - shared-net
+
+    # One-shot reminder of the web-app URL
+    {{.AppNameShort}}_web_url:
+        image: {{.API.Build.RunImage}}
+        # Polls the LB (any HTTP response counts) so the echo lands after the API/LB startup logs
+        command:
+            - sh
+            - -c
+            - |
+                until curl -s -o /dev/null http://{{.AppNameShort}}_api_lb:8080/; do sleep 1; done
+                echo 'Web app: http://localhost:45555/'
+        restart: "no"
+        depends_on:
+            - {{.AppNameShort}}_api
+            - {{.AppNameShort}}_api_lb
+        networks:
+            - shared-net
 %[4]s
 networks:
     shared-net:

@@ -108,7 +108,7 @@ func CheckDeps(ctx CancelableContext, printDeps bool) bool {
 
 // Checking the API's dependencies
 func checkAPIDeps() (string, []*Module, bool) {
-	if IsDevAPI() || IsDevLibrary() {
+	if IsDevGoSrc() {
 		// controlling the Go version first
 		goVersion := string(RunAndGet("Checking Go version", GetGoSrcDir(), true, "%s", "go list -mod=mod -m -u go"))
 		if strings.HasSuffix((strings.TrimSpace(goVersion)), "]") {
@@ -143,8 +143,8 @@ func checkAPIDeps() (string, []*Module, bool) {
 
 // Checking the web app's dependencies
 func checkWebappDeps() string {
-	if IsDevWebApp() {
-		return string(RunAndGet("Checking the web app's deps", Config().Web.SrcDir, false, "%s", "ncu --format group"))
+	if IsDevWebSrc() {
+		return string(RunAndGet("Checking the web app's deps", getWebSrcDir(), false, "%s", "ncu --format group"))
 	}
 
 	return ""

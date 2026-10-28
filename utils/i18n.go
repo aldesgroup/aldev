@@ -184,7 +184,7 @@ func createFile(wg *sync.WaitGroup, destFolder string, lg translationLanguage,
 	contentString := fmt.Sprintf("{\n%s\n}", strings.Join(content, ",\n"))
 
 	// let's build the filename
-	filename := fmt.Sprintf("%s.json", path.Base(string(ns)))
+	filename := fmt.Sprintf("%s.json", strings.ReplaceAll(string(ns), "/", "_"))
 	filepath := path.Join(destFolder, string(lg), filename)
 
 	// ok for writing it all out

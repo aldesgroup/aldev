@@ -26,7 +26,7 @@ var aldevSwapCmd = &cobra.Command{
 	Use:   "codeswap",
 	Short: "Swaps bit of code - like import paths - in targeted files",
 	Long: "This performs swaps of code in order, for example, to work locally more efficiently," +
-		" by allowing to replace paths to vendor libraries by paths to local git projects",
+		" by allowing to replace paths to vendor libraries with paths to local git projects",
 	Run: aldevSwapRun,
 }
 
@@ -162,7 +162,7 @@ func doAllTheSwaps(ctx utils.CancelableContext, rollback bool, startOrFinish boo
 	time.Sleep(50 * time.Millisecond)
 
 	// syncing the Go.sum file with the swaps done
-	if utils.Config().API != nil || utils.Config().Lib != nil {
+	if utils.IsDevGoSrc() {
 		goCodeCtx := utils.InitAldevContext(100, nil).WithExecDir(utils.GetGoSrcDir())
 		utils.Run("Making sure the Go.sum file is synced", goCodeCtx, false, "go mod tidy")
 	}
