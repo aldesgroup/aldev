@@ -4,6 +4,7 @@
 package utils
 
 import (
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -152,15 +153,30 @@ func devUp(noServe bool) {
 func devDown() {
 	// Nuking everything launched with Podman... That may be a little bit too much
 	// We'll prolly have to smooth that out sometimes later
+	if IsDevWebApp() {
+		QuickRunWithFail("Stopping the web URL logger", "podman rm --force --filter name=local_%s_web_url", Config().AppNameShort)
+	}
+
 	if IsDevAPI() {
-		QuickRun("Stopping the load balancer first", "podman rm --force --filter name=local_%s_api_lb", Config().AppNameShort)
-		QuickRun("Stopping the API instances", "podman rm --force --filter name=local_%s_api", Config().AppNameShort)
+		QuickRunWithFail("Stopping the load balancer first", "podman rm --force --filter name=local_%s_api_lb", Config().AppNameShort)
+		QuickRunWithFail("Stopping the API instances", "podman rm --force --filter name=local_%s_api", Config().AppNameShort)
 	}
 
 	// // Also, making sure Podman's internal network is removed to be able to start from fresh later on
 	// QuickRun("Stopping the API (2/2)", "%s", "podman network rm local_default")
 }
 
+// QuickRunWithFail executes a command and logs its purpose, but does not fail the program if the command fails.
+func QuickRunWithFail(whyRunThis string, commandAsString string, params ...any) bool {
+	ctx := NewBaseContext().WithStdErrWriter(io.Discard).WithAllowFailure(true)
+	if verbose {
+		ctx.WithStdErrWriter(os.Stdout).WithStdOutWriter(os.Stdout)
+	}
+
+	return Run(whyRunThis, ctx, verbose, commandAsString, params...)
+}
+
+// ensureLocalEnvReady checks and sets up the local environment required for development, such as creating the 'shared-net' network if it doesn't exist.
 func ensureLocalEnvReady() {
 	if IsDevAPI() {
 		// create the missing network if it doesn't exist yet
