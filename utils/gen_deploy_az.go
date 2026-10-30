@@ -31,6 +31,7 @@ func (thisGen *azureDeploymentGenerator) getPlatform() string {
 
 const infraDir = "a-infra"
 const apimDir = "b-apim"
+const webDir = "c-web"
 
 func (thisGen *azureDeploymentGenerator) generateDeployConfig(remoteDir string) {
 	// generating the Terraform files for the infrastructure deployment
@@ -39,20 +40,11 @@ func (thisGen *azureDeploymentGenerator) generateDeployConfig(remoteDir string) 
 	// generating the Terraform files for the APIM deployment
 	thisGen.generateAPIMDeployment(remoteDir)
 
-	// the Gitlab CI/CD conf
-	if Config().Deploying.CICD != nil && Config().Deploying.CICD.Type == "gitlab" {
-		replacements := []string{
-			"identity_sub_name", "acr_sub_name",
-			"acr_name", "resource_ns",
-			"env-SANDBOX", "sub-SANDBOX",
-			"env-STAGING", "sub-STAGING",
-			"env-PRODUCTION", "sub-PRODUCTION",
-			"GITLAB_CID_SNAKE", "SOME_SPACE",
-		}
-		EnsureFileFromTemplate(".gitlab-ci.yml", replaceIn("", Config().Deploying.Platform.Config.Global, azure.GitlabAzureCIxCDxCONF, replacements...))
-	} else {
-		core.PanicMsg("Empty or unhandled CI/CD method: '%s'", Config().Deploying.CICD)
-	}
+	// generating the Gitlab CI/CD config file if needed
+	thisGen.generateCiCdConfig(remoteDir)
+
+	// generating the web deployment config files if needed
+	thisGen.generateWebDeployment(remoteDir)
 }
 
 func (thisGen *azureDeploymentGenerator) GetServers() (servers map[core.EnvType]string) {
@@ -130,6 +122,27 @@ func (thisGen *azureDeploymentGenerator) generateInfraDeployment(remoteDir strin
 }
 
 // ----------------------------------------------------------------------------
+// Generating the Gitlab CI/CD config file
+// ----------------------------------------------------------------------------
+
+func (thisGen *azureDeploymentGenerator) generateCiCdConfig(remoteDir string) {
+	// the Gitlab CI/CD conf
+	if Config().Deploying.CICD != nil && Config().Deploying.CICD.Type == "gitlab" {
+		replacements := []string{
+			"identity_sub_name", "acr_sub_name",
+			"acr_name", "resource_ns",
+			"env-SANDBOX", "sub-SANDBOX",
+			"env-STAGING", "sub-STAGING",
+			"env-PRODUCTION", "sub-PRODUCTION",
+			"GITLAB_CID_SNAKE", "SOME_SPACE",
+		}
+		EnsureFileFromTemplate(".gitlab-ci.yml", replaceIn("", Config().Deploying.Platform.Config.Global, azure.GitlabAzureCIxCDxCONF, replacements...))
+	} else {
+		core.PanicMsg("Empty or unhandled CI/CD method: '%s'", Config().Deploying.CICD)
+	}
+}
+
+// ----------------------------------------------------------------------------
 // Generating the APIM deployment config files for Azure
 // ----------------------------------------------------------------------------
 
@@ -157,6 +170,46 @@ func (thisGen *azureDeploymentGenerator) generateAPIMDeployment(remoteDir string
 		// creating / customizing the Terraform main file for the current env
 		replacements := []string{"environment_sub_name", "apim_sub_name", "apim_name", "apim_rg", "domain_name"}
 		EnsureFileFromTemplate(path.Join(envDir, "main.tf"), replaceIn(envName, envParams, azure.TerraformAzureAPIMxENV, replacements...), envName)
+	}
+}
+
+// ----------------------------------------------------------------------------
+// Generating the web deployment config files for Azure
+// ----------------------------------------------------------------------------
+
+func (thisGen *azureDeploymentGenerator) generateWebDeployment(remoteDir string) {
+	// nothing to do here if no web configuration is provided
+	if Config().Web == nil {
+		return
+	}
+
+	// this is the main file generically describing the infrastructure, for all the environment types
+	// so it's meant to be used by each environment with a custom config
+	core.EnsureDir(path.Join(remoteDir, webDir))
+	EnsureFileFromTemplate(path.Join(remoteDir, webDir, "main.tf"), azure.TerraformAzureWEBxCOMMON)
+
+	// now dealing for each environment
+	for envName, envParams := range Config().Deploying.Platform.Config.Environments {
+		// creating the folder for the current environment
+		envType := getEnvType(envName, true)
+		envDirName := fmt.Sprintf("%d-%s", envType, envName)
+		envDir := core.EnsureDir(path.Join(remoteDir, webDir, envDirName))
+
+		// creating the Terraform backend file for the current env
+		EnsureFileFromTemplate(path.Join(envDir, "backend.tf"), replaceIn(envName, envParams, azure.TerraformAzureBACKEND, "resource_ns"), envName+".web")
+
+		// building the hostname, which is different for production
+		domainName := getEnvParamValue(envName, envParams, "domain_name")
+		webName := getEnvParamValue(envName, envParams, "web_name")
+		if envType == core.EnvTypePRODUCTION {
+			envParams["host_name"] = fmt.Sprintf("%s.%s", webName, domainName)
+		} else {
+			envParams["host_name"] = fmt.Sprintf("%s-%s.%s", webName, envName, domainName)
+		}
+
+		// creating / customizing the Terraform main file for the current env
+		replacements := []string{"environment_sub_name", "frontdoor_sub_name", "frontdoor_name", "frontdoor_rg", "host_name"}
+		EnsureFileFromTemplate(path.Join(envDir, "main.tf"), replaceIn(envName, envParams, azure.TerraformAzureWEBxENV, replacements...), envName)
 	}
 }
 
