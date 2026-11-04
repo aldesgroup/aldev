@@ -87,8 +87,9 @@ func runCmd(whyRunThis string, ctxArg CancelableContext, logStart bool, cmd *exe
 	}
 
 	// passing the env vars, if any
+	cmd.Env = os.Environ()
 	for _, envVar := range ctx.getEnvVars() {
-		cmd.Env = append(os.Environ(), envVar)
+		cmd.Env = append(cmd.Env, envVar)
 	}
 
 	// bit of logging

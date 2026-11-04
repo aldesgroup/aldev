@@ -77,10 +77,10 @@ type AldevConfig struct {
 			SrcDir string // where the Web app's GoaldR-based code should be found
 			Port   int    // the port used to expose the app's frontend
 		}
-		EnvVars []*struct { // environment variables to pass to the web app
-			Name  string // the variable name; must start with "WEB_"
-			Desc  string // a description for the
-			Value string // the value we're using for the local dev environment
+		EnvVars *struct { // environment variables to pass to the web app
+			Common yaml.Node            // the common web environment variables config for all the environments, local + remote ones
+			Local  yaml.Node            // the local web environment variables config, which may override the common config
+			Remote map[string]yaml.Node // the remote web environment variables config for each environment, which should override the common config
 		}
 	}
 	Native *struct { // must be filled if there's a native app
@@ -193,19 +193,6 @@ func ReadConfig(cfgFileName string) {
 
 	// Unmarshalling the YAML file
 	core.PanicIfErr(yaml.Unmarshal(yamlBytes, config))
-
-	// Adding the languages to the env vars for the web
-	if config.Web != nil {
-		config.Web.EnvVars = append(config.Web.EnvVars, &struct {
-			Name  string
-			Desc  string
-			Value string
-		}{
-			Name:  "WEB_LANGUAGES",
-			Desc:  "the languages that should be available in the web app",
-			Value: config.Languages,
-		})
-	}
 
 	// Setting some default values
 	if config.API != nil && config.API.LocalDev.Instances <= 0 {

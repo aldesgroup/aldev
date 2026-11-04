@@ -19,10 +19,13 @@ func generateLocalComposeFile(localDir string, resolvedLocalAPIConfig map[string
 	// checking the DB servers config in the resolved local API config
 	dbServerConfigsObj := core.GetValueFromMap(resolvedLocalAPIConfig, "base", "dbservers")
 
+	// do we have a web app in here?
+	isWeb := Config().Web != nil
+
 	// no database, this is straightforward
 	if dbServerConfigsObj == nil {
 		// no DB servers configured, so we just generate a simple compose file with the API and the Nginx
-		EnsureFileFromTemplate(path.Join(localDir, "compose.yaml"), templates.LocalCOMPOSE, "", "", "", "")
+		EnsureFileFromTemplate(path.Join(localDir, "compose.yaml"), templates.LocalCOMPOSE(isWeb), "", "", "", "")
 		return
 	}
 
@@ -39,7 +42,7 @@ func generateLocalComposeFile(localDir string, resolvedLocalAPIConfig map[string
 	}
 
 	// generating
-	EnsureFileFromTemplate(path.Join(localDir, "compose.yaml"), templates.LocalCOMPOSE,
+	EnsureFileFromTemplate(path.Join(localDir, "compose.yaml"), templates.LocalCOMPOSE(isWeb),
 		getBeforeApiPart(localDir, dbConfigs), getApiRunPart(dbConfigs), getApiDependPart(dbConfigs), getVolumesPart(dbConfigs))
 }
 

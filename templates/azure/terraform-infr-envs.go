@@ -68,7 +68,6 @@ const TerraformAzureINFRAxGLOBAL = `# ------------------------------------------
 resource "azuread_application" "app_{resource_ns}_{{.AppNameLower}}" {
   display_name = "app-{resource_ns}-{{.AppNameLower}}"
 
-  # IMPORTANT : URI lisible mais conforme à la policy du tenant
   identifier_uris = ["api://{domain_name}/app-{resource_ns}-{{.AppNameLower}}"]
 
   api {
@@ -100,7 +99,7 @@ resource "azuread_service_principal" "sp_{resource_ns}_{{.AppNameLower}}" {
 const TerraformAzureINFRAxGLOBALnGITLAB = TerraformAzureINFRAxGLOBAL + `
 # --------------------------------------------------------------------------- #
 # --- Allowing Gitlab to deploy stuff on Azure for this app
-# 
+#
 # MAKE SURE THE APP REG USED HERE FOR GITLAB HAS LESS THAN 20 CREDENTIALS,
 # ELSE USE A NEW APP REG DEDICATED TO GITLAB AND PUT ITS NAME IN ALDEV CONFIG
 # --------------------------------------------------------------------------- #

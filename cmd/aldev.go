@@ -201,7 +201,6 @@ func asyncPrepareAndRun(ctx utils.CancelableContext) {
 	}
 
 	if utils.IsDevGoSrc() {
-
 		// Running the Go API in 'dev server' mode
 		utils.RunGoSrcDev(ctx, noServe)
 	}

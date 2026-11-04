@@ -164,7 +164,7 @@ data "azurerm_container_registry" "acr" {
 }
 
 # 6) App Registration for ACA Easy Auth (created in 0-glo, read here)
-data "azuread_application" "app_pdt_buenrating" {
+data "azuread_application" "app_{resource_ns}_{{.AppNameLower}}" {
   display_name = "app-{resource_ns}-{{.AppNameLower}}"
 }
 
@@ -311,6 +311,14 @@ resource "azurerm_container_app" "aca" {
         name  = "OIDC_AUDIENCE"
         value = "api://${var.config.domain_name}/app-{resource_ns}-{{.AppNameLower}}"
       }
+      env {
+        name  = "KEYVAULT_URL"
+        value = azurerm_key_vault.kv.vault_uri
+      }
+      env {
+        name  = "AZURE_CLIENT_ID" # lets the Azure SDK pick the user-assigned identity
+        value = azurerm_user_assigned_identity.uai.client_id
+      }
     }
   }
 
@@ -355,7 +363,7 @@ resource "azapi_resource" "aca_easy_auth" {
         azureActiveDirectory = {
           enabled = true
           registration = {
-            clientId     = data.azuread_application.app_pdt_buenrating.client_id
+            clientId     = data.azuread_application.app_{resource_ns}_{{.AppNameLower}}.client_id
             openIdIssuer = "https://sts.windows.net/${data.azurerm_client_config.me.tenant_id}/v2.0"
           }
           validation = {

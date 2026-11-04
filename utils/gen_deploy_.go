@@ -7,6 +7,7 @@ package utils
 
 import (
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,8 +36,9 @@ func IsRegen() bool {
 // ----------------------------------------------------------------------------
 
 type iRemoteDeploymentGenerator interface {
-	getPlatform() string
-	generateDeployConfig(remoteDir string)
+	getPlatform() string     // e.g. "fullAzure"
+	getPlatformHost() string // e.g. "azure-api.net"
+	generateDeployConfig(remoteDir string, confs map[string]map[string]any)
 	GetServers() map[core.EnvType]string
 }
 
@@ -64,23 +66,10 @@ func GetRemoteDeploymentGenerator() iRemoteDeploymentGenerator {
 // ----------------------------------------------------------------------------
 
 func GenerateDeployFiles(ctx CancelableContext) {
-	// --------------------------------------------------------------------
-	// API runtimes configuration
-	// --------------------------------------------------------------------
-
-	// we at least need to generate the local API config file
-	ensureLocalEnvType()
-	resolvedLocalAPIConfig := generateAPIConfFile("local", Config().API.Runtimes.Local, regen, true)
-
-	// if we've configured remote environments, then we'll need config files for them
-	for envName, envConf := range Config().API.Runtimes.Remote {
-		generateAPIConfFile(envName, envConf, regen, false)
-	}
 
 	// --------------------------------------------------------------------
-	// Deployment-related configuration
+	// Controlling the input, i.e. the Aldev config
 	// --------------------------------------------------------------------
-
 	if Config().Deploying == nil || Config().Deploying.Dir == "" {
 		Info("No 'deploying' section in the config")
 		return
@@ -118,6 +107,51 @@ func GenerateDeployFiles(ctx CancelableContext) {
 	}
 	generationNeeded = generationNeeded || aldevConfigHasChanged
 
+	// --------------------------------------------------------------------
+	// API runtimes configuration
+	// --------------------------------------------------------------------
+
+	// we at least need to generate the local API config file
+	ensureLocalEnvType()
+	resolvedAPIConfigs := map[string]map[string]any{}
+	resolvedAPIConfigs["local"] = generateAPIConfFile("local", Config().API.Runtimes.Local, generationNeeded)
+
+	// if we've configured remote environments, then we'll need config files for them
+	for envName, envConf := range Config().API.Runtimes.Remote {
+		resolvedAPIConfigs[envName] = generateAPIConfFile(envName, envConf, generationNeeded)
+	}
+
+	// --------------------------------------------------------------------
+	// Handling the secrets, if any
+	// --------------------------------------------------------------------
+
+	// finding all the secrets
+	secrets := map[string][]string{}
+	for envName, resolvedAPIConf := range resolvedAPIConfigs {
+		secrets[envName] = extractSecrets(resolvedAPIConf, 0)
+	}
+
+	// creating / updating the local secrets file
+	generateLocalSecretsFile(secrets["local"])
+
+	// --------------------------------------------------------------------
+	// Web environment variables configuration
+	// --------------------------------------------------------------------
+
+	if Config().Web != nil {
+		// local env vars
+		generateWebEnvVars(".env.development", "local", Config().Web.EnvVars.Local, generationNeeded)
+
+		// remote env vars
+		for envName, envConf := range Config().Web.EnvVars.Remote {
+			generateWebEnvVars(".env."+envName, envName, envConf, generationNeeded)
+		}
+	}
+
+	// --------------------------------------------------------------------
+	// Deployment-related configuration
+	// --------------------------------------------------------------------
+
 	// we're not generating if it's already there, or we're regenerating
 	if generationNeeded {
 		// LFG
@@ -139,7 +173,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		// what we need for local deployment
 		localDir := core.EnsureDir(Config().Deploying.Dir, "local")
 		EnsureFileFromTemplate(path.Join(localDir, "nginx.conf"), templates.LocalNGINX)
-		generateLocalComposeFile(localDir, resolvedLocalAPIConfig)
+		generateLocalComposeFile(localDir, resolvedAPIConfigs["local"])
 
 		// now the base for remote deployment, i.e. the container file
 		containerFilePath := path.Join(Config().Deploying.Dir, "Containerfile")
@@ -161,7 +195,7 @@ func GenerateDeployFiles(ctx CancelableContext) {
 		// --------------------------------------------------------------------
 
 		// what we need for remote deployment - which depend on the targeted platform
-		GetRemoteDeploymentGenerator().generateDeployConfig(core.EnsureDir(Config().Deploying.Dir, "remote"))
+		GetRemoteDeploymentGenerator().generateDeployConfig(core.EnsureDir(Config().Deploying.Dir, "remote"), resolvedAPIConfigs)
 
 		// --------------------------------------------------------------------
 		// Finishing
@@ -172,7 +206,6 @@ func GenerateDeployFiles(ctx CancelableContext) {
 	}
 
 	core.WriteStringToFile(".confgen", "true")
-
 }
 
 // ----------------------------------------------------------------------------
@@ -192,9 +225,17 @@ func getEnvTypeString(envName string, envConfig *APIRuntimeConfig, failIfEmpty b
 	return ""
 }
 
+var envNameForType = make(map[core.EnvType]string) // env type => env name
+
 // returns the env type from the remote environment with the given name
 func getEnvType(envName string, failIfEmpty bool) core.EnvType {
-	return core.EnvTypeValFrom(getEnvTypeString(envName, Config().API.Runtimes.Remote[envName], failIfEmpty))
+	// retrieving the env type for a given env name
+	envType := core.EnvTypeValFrom(getEnvTypeString(envName, Config().API.Runtimes.Remote[envName], failIfEmpty))
+
+	// taking the opportunity of caching the env name for this env type
+	envNameForType[envType] = envName
+
+	return envType
 }
 
 // this sets the "LOCAL" env type on the local runtime config, if not present already
@@ -298,4 +339,33 @@ func deepCopyNode(n *yaml.Node) *yaml.Node {
 		}
 	}
 	return &clone
+}
+
+// ----------------------------------------------------------------------------
+// Utils - secrets in API configs (secrets can't be found in web env vars, btw)
+// ----------------------------------------------------------------------------
+
+const secretPrefix = "secret:"
+
+func extractSecrets(node any, level int) (results []string) {
+	switch typed := node.(type) {
+	case map[string]any:
+		for _, value := range typed {
+			results = append(results, extractSecrets(value, level+1)...)
+		}
+	case []any:
+		for _, value := range typed {
+			results = append(results, extractSecrets(value, level+1)...)
+		}
+	case string:
+		if name, found := strings.CutPrefix(typed, secretPrefix); found {
+			results = append(results, name)
+		}
+	}
+
+	if level == 0 {
+		sort.Strings(results)
+	}
+
+	return
 }
