@@ -84,6 +84,8 @@ func getBeforeApiPart(localDir string, dbConfigs map[string]map[string]interface
                 ./bin/{{.AppNameKebab}}-api -config src/conf-local.yaml -migrate && touch tmp/.db_init_done
         depends_on:%s
         restart: "no"
+        # Env file for the secrets, if any
+        env_file: .env.local
 `, getDependOnDbServicesPart(dbConfigs))
 
 	return cleanJob + dbServices + initJob
@@ -164,8 +166,7 @@ func getDependOnDbServicesPart(dbConfigs map[string]map[string]interface{}) stri
 	for dbName, dbConfig := range dbConfigs {
 		if dbType, ok := dbConfig["type"].(string); ok && dbType == "postgresql" {
 			dependOnDbServices += fmt.Sprintf("\n"+`            %s_db:
-                condition: service_healthy
-`, dbName)
+                condition: service_healthy`, dbName)
 		}
 	}
 
